@@ -25,11 +25,11 @@ export class UI {
         this.joinForm.addEventListener('submit', (e) => {
             e.preventDefault();
 
-            let name = ((nameInput && nameInput.value) || 'Герой').trim();
-            let color = ((colorInput && colorInput.value) || 'red').trim();
+            onJoin({ name: savedName, color: savedColor });
+        this.hudFps.textContent = fps;
 
             name = name.slice(0, 16).replace(/[^\w\u0400-\u04FF -]/g, '');
-            if (!name) name = 'Герой';
+            if (!name) name = 'ГѓГҐГ°Г®Г©';
 
             if (!isValidCssColor(color)) color = 'red';
 
