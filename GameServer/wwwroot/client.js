@@ -1,8 +1,8 @@
 import { Network } from './core/network.js';
 import { UI } from './ui/ui.js';
-import { init, start } from './render.js';
-import World from './world.js';
-import Entity from './entity.js';
+import { init, start, state as renderState } from './render/render.js';
+import World from './data/world.js';
+import Entity from './data/entity.js';
 
 // === Config / Types ===
 const WS_PATH = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
@@ -16,7 +16,6 @@ const SNAPSHOT_HZ = 20;
 class GameClient {
   /** @type {Network} */ net;
   /** @type {World} */ world;
-  /** @type {Renderer} */ renderer;
   /** @type {Input} */ input;
   /** @type {UI} */ ui;
   /** @type {Selection} */ selection;
@@ -35,10 +34,10 @@ class GameClient {
 
 // === World state (authoritative from server) ===
 function startTest() {
-    // Ñîçäàåì òåñòîâûé ìèð
+    // Ã‘Ã®Ã§Ã¤Ã Ã¥Ã¬ Ã²Ã¥Ã±Ã²Ã®Ã¢Ã»Ã© Ã¬Ã¨Ã°
     const world = new World();
 
-    // Äîáàâëÿåì íåñêîëüêî þíèòîâ
+    // Ã„Ã®Ã¡Ã Ã¢Ã«Ã¿Ã¥Ã¬ Ã­Ã¥Ã±ÃªÃ®Ã«Ã¼ÃªÃ® Ã¾Ã­Ã¨Ã²Ã®Ã¢
     world.upsertEntity(new Entity({
         id: 'unit1',
         type: 'peasant',
@@ -67,17 +66,17 @@ function startTest() {
         color: 'red'
     }));
 
-    // DOM ýëåìåíòû êàíâû
+    // DOM Ã½Ã«Ã¥Ã¬Ã¥Ã­Ã²Ã» ÃªÃ Ã­Ã¢Ã»
     const mapCanvas = document.getElementById('map');
     const overlayCanvas = document.getElementById('overlay');
 
-    // Çàãëóøêà selection
+    // Ã‡Ã Ã£Ã«Ã³Ã¸ÃªÃ  selection
     const selection = { ids: new Set(), onChange: () => { } };
 
-    // Èíèöèàëèçàöèÿ ðåíäåðà
+    // ÃˆÃ­Ã¨Ã¶Ã¨Ã Ã«Ã¨Ã§Ã Ã¶Ã¨Ã¿ Ã°Ã¥Ã­Ã¤Ã¥Ã°Ã 
     init({ mapCanvas, overlayCanvas, world, selection });
 
-    // Çàïóñê öèêëà ðåíäåðà
+    // Ã‡Ã Ã¯Ã³Ã±Ãª Ã¶Ã¨ÃªÃ«Ã  Ã°Ã¥Ã­Ã¤Ã¥Ã°Ã 
     start();
 }
 
@@ -139,10 +138,10 @@ class Selection {
     /** Core */
     const world = new World();
     const selection = new Selection();
-    const renderer = new Renderer(map, overlay, world, selection);
     const ui = new UI();
     const commands = new CommandBus();
     const net = new Network();
+    renderState.onFps = fps => ui.setFps(fps);
 
     /** Wiring */
     const input = new Input(map, selection);
@@ -158,9 +157,6 @@ class Selection {
     net.onState = st => ui.setConnState(st);
 
     selection.onChange = ids => {
-        // îáíîâèòü UI äåéñòâèé/èíñïåêòîð; íàéòè ñóùíîñòè ïî ids
-    };
-
     ui.bindJoin(({ name, color }) => {
         net.connect(WS_PATH);
         net.sendJoin({ name, color });

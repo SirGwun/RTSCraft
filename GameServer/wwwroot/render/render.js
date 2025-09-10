@@ -1,4 +1,4 @@
-const state = {
+export const state = {
   /** @type {HTMLCanvasElement|null} */ mapCanvas: null,
   /** @type {HTMLCanvasElement|null} */ overlayCanvas: null,
   /** @type {CanvasRenderingContext2D|null} */ mapCtx: null,
@@ -19,8 +19,8 @@ const state = {
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
 export function init({ mapCanvas, overlayCanvas, world, selection } = {}) {
-    if (!mapCanvas) throw new Error("Render.init: mapCanvas обязателен");
-    if (!overlayCanvas) throw new Error("Render.init: overlayCanvas обязателен");
+    if (!mapCanvas) throw new Error("Render.init: mapCanvas Г®ГЎГїГ§Г ГІГҐГ«ГҐГ­");
+    if (!overlayCanvas) throw new Error("Render.init: overlayCanvas Г®ГЎГїГ§Г ГІГҐГ«ГҐГ­");
 
 
     state.mapCanvas = mapCanvas;
@@ -75,13 +75,13 @@ export function resize() {
 }
 
 function frame(ts) {
-    const dt = Math.min(100, ts - state.lastTs); // кап отрывов
+    const dt = Math.min(100, ts - state.lastTs); // ГЄГ ГЇ Г®ГІГ°Г»ГўГ®Гў
     state.lastTs = ts;
 
     beginFrame(dt);
     if (shouldRedraw()) {
         clearPass();
-        const visible = cullCompute();                // <- исправлено имя
+        const visible = cullCompute();                // <- ГЁГ±ГЇГ°Г ГўГ«ГҐГ­Г® ГЁГ¬Гї
         drawPass(visible);
         overlayPass();
     }
@@ -91,14 +91,14 @@ function frame(ts) {
 }
 
 function beginFrame(dt) {
-    // можно добавить счётчик FPS при желании
+    // Г¬Г®Г¦Г­Г® Г¤Г®ГЎГ ГўГЁГІГј Г±Г·ВёГІГ·ГЁГЄ FPS ГЇГ°ГЁ Г¦ГҐГ«Г Г­ГЁГЁ
 }
 
 function clearPass() {
     const { mapCtx, overlayCtx, viewport: { w, h }, clearColor } = state;
-    // фон
+    // ГґГ®Г­
     mapCtx.save();
-    mapCtx.setTransform(1, 0, 0, 1, 0, 0); // чистим в экранных координатах
+    mapCtx.setTransform(1, 0, 0, 1, 0, 0); // Г·ГЁГ±ГІГЁГ¬ Гў ГЅГЄГ°Г Г­Г­Г»Гµ ГЄГ®Г®Г°Г¤ГЁГ­Г ГІГ Гµ
     mapCtx.fillStyle = clearColor;
     mapCtx.fillRect(0, 0, w, h);
     mapCtx.restore();
@@ -122,12 +122,12 @@ function drawPass(entities) {
 }
 
 function overlayPass() {
-    // рамки/подсветки позже
+    // Г°Г Г¬ГЄГЁ/ГЇГ®Г¤Г±ГўГҐГІГЄГЁ ГЇГ®Г§Г¦ГҐ
 }
 
-function endFrame(dt) { /* метрики/dirty позже */ }
+function endFrame(dt) { /* Г¬ГҐГІГ°ГЁГЄГЁ/dirty ГЇГ®Г§Г¦ГҐ */ }
 
-// простая сетка в мировых координатах
+// ГЇГ°Г®Г±ГІГ Гї Г±ГҐГІГЄГ  Гў Г¬ГЁГ°Г®ГўГ»Гµ ГЄГ®Г®Г°Г¤ГЁГ­Г ГІГ Гµ
 function drawGrid(step = 32) {
     const { mapCtx: ctx, viewport: { w, h }, camera: { x, y, zoom } } = state;
     const left = screenToWorld(0, 0).x;
