@@ -1,193 +1,139 @@
-// === Rendering ===
-
 const state = {
-  /** @type {HTMLCanvasElement} */          mapCanvas: null,
-  /** @type {HTMLCanvasElement} */          overlayCanvas: null,
-  /** @type {CanvasRenderingContext2D} */   mapCtx: null,
-  /** @type {CanvasRenderingContext2D} */   overlayCtx: null,
-  /** @type {Number} */                     dpr: Math.max(1, Math.min(window.devicePixelRatio || 1, 3)),
-  /** @type {Number, Number} CSS-ïèêñåëè */ viewport: { w: 0, h: 0 },
-  /** @type {string} */                     clearColor: "#111318",
-  /** @type {boolean} */                    running: false,
-  /** @type {Number} */                     lastTs: 0,
-  /** @type {() => {}} */                   worldHandlers: [], // ðèñóåì â ìèðîâûõ êîîðäèíàòàõ (ïîä äåéñòâèåì êàìåðû)
-  /** @type {() => {}} */                   overlayHandlers: [], // ðèñóåì ïîâåðõ (UI), â ýêðàííûõ êîîðäèíàòàõ
-
-  /** @type {World} */                      world,
-  /** @type {Selection} */                  selection,
-  /** @type {number} */                     lastFrameTs = 0,
-  /** @param {number} ts */                 frame (ts) { },
-  /** @type {(fps:number)=>void} */         onFps = () => { },
-
-    camera: {
-        x: 0,
-        y: 0,
-        zoom: 1,
-        minZoom: 0.25,
-        maxZoom: 6,
-    },
-    
-    gridOptions: {
-        size: 32,
-        boldEvery: 8, //?
-        color: "#1d222a",
-        boldColor: "#262c35",
-        axisColor: "#2e7dd1",
-    },
+  /** @type {HTMLCanvasElement|null} */ mapCanvas: null,
+  /** @type {HTMLCanvasElement|null} */ overlayCanvas: null,
+  /** @type {CanvasRenderingContext2D|null} */ mapCtx: null,
+  /** @type {CanvasRenderingContext2D|null} */ overlayCtx: null,
+  /** @type {number} */ dpr: window.devicePixelRatio || 1,
+  /** @type {string} */ clearColor: "#111318",
+  /** @type {boolean} */ running: false,
+  /** @type {number} */ lastTs: 0,
+  /** @type {Array<Function>} */ worldHandlers: [],
+  /** @type {Array<Function>} */ overlayHandlers: [],
+  /** @type {any} */ world: null,
+  /** @type {any} */ selection: null,
+  /** @type {{w:number,h:number}} */ viewport: { w: 0, h: 0 },
+    camera: { x: 0, y: 0, zoom: 1, minZoom: 0.25, maxZoom: 6 },
+  /** @type {(fps:number)=>void} */ onFps: () => { }
 };
 
-export function init({ mapCanvas, overlayCanvas, clearColor } = {}) {
-    if (!mapCanvas) throw new Error("Render.init: mapCanvas îáÿçàòåëåí");
-    if (!overlayCanvas) throw new Error("Render.init: overlayCanvas îáÿçàòåëåí");
-
-    state.mapCanvas = mapCanvas;
-    state.overlayCanvas = overlayCanvas;
-
-    state.mapCtx = mapCanvas.getContext("2d", { alpha: false, desynchronized: true });
-    state.overlayCtx = overlayCanvas.getContext("2d", { alpha: true, desynchronized: true });
-
-    if (clearColor) state.clearColor = clearColor;
-
-    window.addEventListener("resize", resize);
-    resize();
+export function start() {
+    if (state.running) return;
+    state.running = true;
+    state.lastTs = performance.now();
+    requestAnimationFrame(frame);
+}
+export function stop() {
+    state.running = false;
+    if (state._onResize) window.removeEventListener("resize", state._onResize);
 }
 
 export function resize() {
-    const { dpr } = state;
+    state.dpr = window.devicePixelRatio || 1;
     const parent = state.mapCanvas.parentElement;
     const { width: cssW, height: cssH } = parent.getBoundingClientRect();
 
     state.viewport.w = Math.max(1, Math.floor(cssW));
     state.viewport.h = Math.max(1, Math.floor(cssH));
 
-    // w, h in device px
-    const w = Math.max(1, Math.floor(state.viewport.w * dpr));
-    const h = Math.max(1, Math.floor(state.viewport.h * dpr));
+    const w = Math.max(1, Math.floor(state.viewport.w * state.dpr));
+    const h = Math.max(1, Math.floor(state.viewport.h * state.dpr));
 
-    //mapCanvas.style.width = viewport.w + 'px';
-    //mapCanvas.style.height = viewport.h + 'px';
-    //overlayCanvas.style.width = viewport.w + 'px';
-    //overlayCanvas.style.height = viewport.h + 'px';
+    state.mapCanvas.style.width = state.viewport.w + "px";
+    state.mapCanvas.style.height = state.viewport.h + "px";
+    state.overlayCanvas.style.width = state.viewport.w + "px";
+    state.overlayCanvas.style.height = state.viewport.h + "px";
 
     const apply = (canvas, ctx) => {
-        if (canvas.width !== w || canvas.height !== h) {
-            canvas.width = w;
-            canvas.height = h;
-        }
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.scale(dpr, dpr);
+        if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+        ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+        ctx.imageSmoothingEnabled = false;
     };
-
-    apply(mapCanvas, mapCtx);
-    apply(overlayCanvas, overlayCtx);
-
-    drawGrid();
+    apply(state.mapCanvas, state.mapCtx);
+    apply(state.overlayCanvas, state.overlayCtx);
 }
 
-// —————-————————————————————————————————————————————————————
-// Camera
-// ——————————————————————————————————————————————————————————
+function frame(ts) {
+    const dt = Math.min(100, ts - state.lastTs); // êàï îòðûâîâ
+    state.lastTs = ts;
 
-export function getCamera() {
-    return { ...state.camera };
-}
-
-export function setCameraX(x) {
-    if (typeof x === "number") state.camera.x = x;
-}
-export function setCameraY(y) {
-    if (typeof y === "number") state.camera.y = y;
-}
-export function setCameraZoom(zoom) {
-    if (typeof zoom === "number") state.camera.zoom = clamp(zoom, state.camera.minZoom, state.camera.maxZoom);
-}
-
-// ——————————————————————————————————————————————————————————
-// GRID
-// ——————————————————————————————————————————————————————————
-export function enableGrid(options = {}) {
-    state.showGrid = true;
-    state.gridOptions = { ...state.gridOptions, ...options };
-}
-
-export function disableGrid() {
-    state.showGrid = false;
-}
-
-function drawGrid() {
-    const ctx = state.mapCtx;
-
-    if (!state.showGrid) return;
-
-    const { size, boldEvery, color, boldColor, axisColor } = state.gridOptions;
-    const { w, h } = state.viewport;
-    const { x: cx, y: cy, zoom } = state.camera;
-
-
-    // Âèäèìàÿ îáëàñòü â ìèðîâûõ êîîðäèíàòàõ
-    const halfW = w / (2 * zoom);
-    const halfH = h / (2 * zoom);
-    const x1 = Math.floor(cx - halfW) - size;
-    const y1 = Math.floor(cy - halfH) - size;
-    const x2 = Math.ceil(cx + halfW) + size;
-    const y2 = Math.ceil(cy + halfH) + size;
-
-    ctx.lineWidth = 1 / zoom;
-
-    // Âåðòèêàëè
-    for (let x = alignTo(x1, size); x <= x2; x += size) {
-        const scr = worldToScreen(x, 0).x;
-        ctx.beginPath();
-        ctx.strokeStyle = (x % (size * boldEvery) === 0) ? boldColor : color;
-        ctx.moveTo(x, y1);
-        ctx.lineTo(x, y2);
-        ctx.stroke();
+    beginFrame(dt);
+    if (shouldRedraw()) {
+        clearPass();
+        const visible = cullCompute();                // <- èñïðàâëåíî èìÿ
+        drawPass(visible);
+        overlayPass();
     }
+    endFrame(dt);
 
-    // Ãîðèçîíòàëè
-    for (let y = alignTo(y1, size); y <= y2; y += size) {
-        ctx.beginPath();
-        ctx.strokeStyle = (y % (size * boldEvery) === 0) ? boldColor : color;
-        ctx.moveTo(x1, y);
-        ctx.lineTo(x2, y);
-        ctx.stroke();
+    if (state.running) requestAnimationFrame(frame);
+}
+
+function beginFrame(dt) {
+    // ìîæíî äîáàâèòü ñ÷¸ò÷èê FPS ïðè æåëàíèè
+}
+
+function clearPass() {
+    const { mapCtx, overlayCtx, viewport: { w, h }, clearColor } = state;
+    // ôîí
+    mapCtx.save();
+    mapCtx.setTransform(1, 0, 0, 1, 0, 0); // ÷èñòèì â ýêðàííûõ êîîðäèíàòàõ
+    mapCtx.fillStyle = clearColor;
+    mapCtx.fillRect(0, 0, w, h);
+    mapCtx.restore();
+
+    overlayCtx.clearRect(0, 0, w, h);
+}
+
+function cullCompute() {
+    return Array.from(state.world?.entities?.values?.() || []);
+}
+
+function drawPass(entities) {
+    drawGrid(32);
+    const { mapCtx, camera: { zoom } } = state;
+    for (const e of entities) {
+        const s = worldToScreen(e.x, e.y);
+        const w = e.w * zoom, h = e.h * zoom;
+        mapCtx.fillStyle = e.color || "red";
+        mapCtx.fillRect(s.x - w / 2, s.y - h / 2, w, h);
     }
-
-
-    // Îñè
-    ctx.strokeStyle = axisColor;
-    ctx.beginPath(); ctx.moveTo(x1, 0); ctx.lineTo(x2, 0); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, y1); ctx.lineTo(0, y2); ctx.stroke();
 }
 
-
-function alignTo(value, step) {
-    return Math.floor(value / step) * step;
+function overlayPass() {
+    // ðàìêè/ïîäñâåòêè ïîçæå
 }
 
+function endFrame(dt) { /* ìåòðèêè/dirty ïîçæå */ }
 
-// ——————————————————————————————————————————————————————————
-// Ïîäïèñàòñÿ/îòïèñàòñÿ íà îòðèñîâêó
-// ——————————————————————————————————————————————————————————
-export function onDrawWorld(fn) {
-    state.worldHandlers.push(fn);
-    return () => unsubscribe(state.worldHandlers, fn);
+// ïðîñòàÿ ñåòêà â ìèðîâûõ êîîðäèíàòàõ
+function drawGrid(step = 32) {
+    const { mapCtx: ctx, viewport: { w, h }, camera: { x, y, zoom } } = state;
+    const left = screenToWorld(0, 0).x;
+    const top = screenToWorld(0, 0).y;
+    const right = screenToWorld(w, 0).x;
+    const bottom = screenToWorld(0, h).y;
+
+    const startX = Math.floor(left / step) * step;
+    const endX = Math.ceil(right / step) * step;
+    const startY = Math.floor(top / step) * step;
+    const endY = Math.ceil(bottom / step) * step;
+
+    ctx.strokeStyle = "#2b3342";
+    ctx.lineWidth = 1;
+
+    for (let gx = startX; gx <= endX; gx += step) {
+        const sx = worldToScreen(gx, 0).x;
+        ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, h); ctx.stroke();
+    }
+    for (let gy = startY; gy <= endY; gy += step) {
+        const sy = worldToScreen(0, gy).y;
+        ctx.beginPath(); ctx.moveTo(0, sy); ctx.lineTo(w, sy); ctx.stroke();
+    }
 }
 
+function prepareOffscreenCaches() { }
+function scheduleRaf() { }
+function updateMetrics(dt) { }
 
-export function onDrawOverlay(fn) {
-    state.overlayHandlers.push(fn);
-    return () => unsubscribe(state.overlayHandlers, fn);
-}
-
-
-function unsubscribe(arr, fn) {
-    const i = arr.indexOf(fn);
-    if (i !== -1) arr.splice(i, 1);
-}
-
-function drawEntities() { }
-function drawSelection() { }
-
-function start() { }
-function stop() { }
+function assertCtx() { }
+function logStats(thresholdMs = 16.7) { }
