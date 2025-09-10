@@ -13,11 +13,11 @@ const state = {
   /** @type {() => {}} */                   worldHandlers: [], // рисуем в мировых координатах (под действием камеры)
   /** @type {() => {}} */                   overlayHandlers: [], // рисуем поверх (UI), в экранных координатах
 
-    /** @type {World} */                      world;
-  /** @type {Selection} */                  selection;
-  /** @type {number} */                     lastFrameTs = 0;
-    frame /** @param {number} ts */(ts) { }
-  /** @type {(fps:number)=>void} */         onFps = () => { };
+  /** @type {World} */                      world,
+  /** @type {Selection} */                  selection,
+  /** @type {number} */                     lastFrameTs = 0,
+  /** @param {number} ts */                 frame (ts) { },
+  /** @type {(fps:number)=>void} */         onFps = () => { },
 
     camera: {
         x: 0,
