@@ -1,6 +1,8 @@
 import { Network } from './core/network.js';
 import { UI } from './ui/ui.js';
-import { Renderer } from './render/render.js'; 
+import { init, start } from './render.js';
+import World from './world.js';
+import Entity from './entity.js';
 
 // === Config / Types ===
 const WS_PATH = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
@@ -32,16 +34,51 @@ class GameClient {
 
 
 // === World state (authoritative from server) ===
-class World {
-  /** @type {number} */ time = 0;
-  /** @type {Map<string,Palyer>} */ palyers = new Map();
-  /** @type {Map<string,Entity>} */ entities = new Map();
-  /** @type {string|null} */ myId = null;
+function startTest() {
+    // Создаем тестовый мир
+    const world = new World();
 
-    applySnapshot /** @param {Snapshot} snap */(snap) { }
-    getMyPalyer() { return null; }
-    getEntitiesByOwner /** @param {string} owner */(owner) { return []; }
-    getEntity /** @param {string} id */(id) { return null; }
+    // Добавляем несколько юнитов
+    world.upsertEntity(new Entity({
+        id: 'unit1',
+        type: 'peasant',
+        x: 64, y: 64,
+        w: 24, h: 24,
+        hp: 50,
+        owner: 'player1',
+        color: 'blue'
+    }));
+    world.upsertEntity(new Entity({
+        id: 'unit2',
+        type: 'soldier',
+        x: 128, y: 96,
+        w: 32, h: 32,
+        hp: 100,
+        owner: 'player1',
+        color: 'green'
+    }));
+    world.upsertEntity(new Entity({
+        id: 'unit3',
+        type: 'soldier',
+        x: 200, y: 160,
+        w: 32, h: 32,
+        hp: 80,
+        owner: 'player2',
+        color: 'red'
+    }));
+
+    // DOM элементы канвы
+    const mapCanvas = document.getElementById('map');
+    const overlayCanvas = document.getElementById('overlay');
+
+    // Заглушка selection
+    const selection = { ids: new Set(), onChange: () => { } };
+
+    // Инициализация рендера
+    init({ mapCanvas, overlayCanvas, world, selection });
+
+    // Запуск цикла рендера
+    start();
 }
 
 // === Commands buffer ===
@@ -132,5 +169,6 @@ class Selection {
     renderer.onFps = fps => ui.setFps(fps);
 
     // start loops
-    renderer.start();
+    //renderer.start();
+    startTest();
 })();

@@ -16,6 +16,28 @@ const state = {
   /** @type {(fps:number)=>void} */ onFps: () => { }
 };
 
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+export function init({ mapCanvas, overlayCanvas, world, selection } = {}) {
+    if (!mapCanvas) throw new Error("Render.init: mapCanvas обязателен");
+    if (!overlayCanvas) throw new Error("Render.init: overlayCanvas обязателен");
+
+
+    state.mapCanvas = mapCanvas;
+    state.overlayCanvas = overlayCanvas;
+    state.mapCtx = mapCanvas.getContext("2d");
+    state.overlayCtx = overlayCanvas.getContext("2d");
+
+
+    state.world = world;
+    state.selection = selection;
+
+
+    state._onResize = resize;
+    window.addEventListener("resize", state._onResize);
+    resize();
+}
+
 export function start() {
     if (state.running) return;
     state.running = true;
