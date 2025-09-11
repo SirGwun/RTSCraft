@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Remove="wwwroot\newFile.js" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="Game\Command\" />
     <Folder Include="Game\Units\" />
   </ItemGroup>

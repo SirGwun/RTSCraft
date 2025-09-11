@@ -1,8 +1,8 @@
 import { Network } from './core/network.js';
 import { UI } from './ui/ui.js';
 import { init, start, state as renderState } from './render/render.js';
-import World from './data/world.js';
-import Entity from './data/entity.js';
+import { World } from './data/world.js';
+import { Entity } from './data/entity.js';
 
 // === Config / Types ===
 const WS_PATH = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
@@ -34,23 +34,21 @@ class GameClient {
 
 // === World state (authoritative from server) ===
 function startTest() {
-    // Ñîçäàåì òåñòîâûé ìèð
     const world = new World();
 
-    // Äîáàâëÿåì íåñêîëüêî þíèòîâ
     world.upsertEntity(new Entity({
         id: 'unit1',
         type: 'peasant',
-        x: 64, y: 64,
+        x: 50, y: 50,
         w: 24, h: 24,
         hp: 50,
         owner: 'player1',
-        color: 'blue'
+        color: 'yellow'
     }));
     world.upsertEntity(new Entity({
         id: 'unit2',
         type: 'soldier',
-        x: 128, y: 96,
+        x: 60, y: 60,
         w: 32, h: 32,
         hp: 100,
         owner: 'player1',
@@ -65,18 +63,24 @@ function startTest() {
         owner: 'player2',
         color: 'red'
     }));
-
-    // DOM ýëåìåíòû êàíâû
+    world.upsertEntity(new Entity({
+        id: 'unit4',
+        type: 'peasant',
+        x: 104, y: 64,
+        w: 12, h: 24,
+        hp: 50,
+        owner: 'player1',
+        color: 'blue'
+    }));
     const mapCanvas = document.getElementById('map');
     const overlayCanvas = document.getElementById('overlay');
 
-    // Çàãëóøêà selection
+
     const selection = { ids: new Set(), onChange: () => { } };
 
-    // Èíèöèàëèçàöèÿ ðåíäåðà
+
     init({ mapCanvas, overlayCanvas, world, selection });
 
-    // Çàïóñê öèêëà ðåíäåðà
     start();
 }
 
@@ -156,15 +160,16 @@ class Selection {
     net.onPing = ms => ui.setPing(ms + "ms");
     net.onState = st => ui.setConnState(st);
 
-    selection.onChange = ids => {
+    // wiring
     ui.bindJoin(({ name, color }) => {
         net.connect(WS_PATH);
         net.sendJoin({ name, color });
     });
 
-    renderer.onFps = fps => ui.setFps(fps);
+    // FPS
+    renderState.onFps = fps => ui.setFps(fps);
 
-    // start loops
-    //renderer.start();
+    // старт теста рендера
     startTest();
+
 })();

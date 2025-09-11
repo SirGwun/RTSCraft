@@ -26,10 +26,10 @@ export class UI {
             e.preventDefault();
 
             onJoin({ name: savedName, color: savedColor });
-        this.hudFps.textContent = fps;
+            this.hudFps.textContent = fps;
 
             name = name.slice(0, 16).replace(/[^\w\u0400-\u04FF -]/g, '');
-            if (!name) name = 'Ãåðîé';
+            if (!name) name = 'Player';
 
             if (!isValidCssColor(color)) color = 'red';
 
@@ -69,12 +69,6 @@ export class UI {
         this.hudWood.textContent = r.wood;
     }
 
-    renderSelection /** @param {Entity[]} entities */(entities) {
-        console.log("Selection:", entities);
-    }
-    renderActions /** @param {Entity[]} entities */(entities) {
-        console.log("Actions for:", entities);
-    }
     pushLog /** @param {string} text */(text) {
         const div = document.createElement("div");
         div.textContent = text;

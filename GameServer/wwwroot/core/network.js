@@ -92,7 +92,6 @@ export class Network {
         this.onState('closed');
     }
 
-    // Senders
     /** @param {{name:string,color:string}} payload */
     sendJoin(payload) {
         if (this.socket?.readyState === WebSocket.OPEN) {
