@@ -1,28 +1,35 @@
+﻿// @ts-check
+
 export const state = {
   /** @type {HTMLCanvasElement|null} */ mapCanvas: null,
   /** @type {HTMLCanvasElement|null} */ overlayCanvas: null,
-  /** @type {CanvasRenderingContext2D|null} */ mapCtx: null,
-  /** @type {CanvasRenderingContext2D|null} */ overlayCtx: null,
-  /** @type {number} */ dpr: window.devicePixelRatio || 1,
-  /** @type {string} */ clearColor: "#111318",
-  /** @type {boolean} */ running: false,
-  /** @type {number} */ last: 0,
-  /** @type {Array<Function>} */ worldLayers: [],
-  /** @type {Array<Function>} */ overlayLayers: [],
-  /** @type {any} */ world: null,
-  /** @type {any} */ selection: null,
-  /** @type {{w:number,h:number}} */ viewport: { w: 0, h: 0 },
-    camera: { x: 0, y: 0, zoom: 1, minZoom: 0.25, maxZoom: 6 },
-  /** @type {(fps:number)=>void} */ onFps: () => { },
-    mouse: { x: 0, y: 0, inView: false, buttons: 0 },
-    root: {width: 0, hidth: 0}
+  /** @type {CanvasRenderingContext2D} */                    mapCtx: null,
+  /** @type {CanvasRenderingContext2D} */                    overlayCtx: null,
+  /** @type {number} */                 dpr: window.devicePixelRatio || 1,
+  /** @type {string} */                 clearColor: "#111318",
+  /** @type {boolean} */                running: false,
+  /** @type {number} */                 last: 0,
+  /** @type {Array<Function>} */        worldLayers: [],
+  /** @type {Array<Function>} */        overlayLayers: [],
+  /** @type {any} */                    world: null,
+  /** @type {any} */                    selection: null,
+  /** @type {{w:number,h:number}} */    ort: { w: 0, h: 0 },
+  /** @type {{w:number,h:number}} */    viewport: { w: 0, h: 0 },
+                                        camera: { x: 0, y: 0, zoom: 1, minZoom: 0.25, maxZoom: 6 },
+                                        mouse: { x: 0, y: 0, inView: false, buttons: 0 },
+                                        root: { width: 0, hidth: 0 },
+  /** @type {(fps:number)=>void} */     onFps: () => { },
+                                        fpsSamples: [],
+                                        fpsReportEvery: 250,
+                                        _lastFpsReport: 0
+
 };
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
-export function init({ mapCanvas, overlayCanvas, world, selection } = {}) {
-    if (!mapCanvas) throw new Error("Render.init: mapCanvas îáÿçàòåëåí");
-    if (!overlayCanvas) throw new Error("Render.init: overlayCanvas îáÿçàòåëåí");
+export function init(mapCanvas, overlayCanvas, world, selection) {
+    if (!mapCanvas) throw new Error("Render.init: mapCanvas обязателен");
+    if (!overlayCanvas) throw new Error("Render.init: overlayCanvas обязателен");
 
 
     state.mapCanvas = mapCanvas;
@@ -57,7 +64,7 @@ export function init({ mapCanvas, overlayCanvas, world, selection } = {}) {
     addWorldLayer(-100, ({ ctx, camera }) => {
         drawGrid(32, ctx, camera);
     });
-
+    //
     addWorldLayer(0, ({ ctx, camera, entities }) => {
         const z = camera.zoom;
         for (const e of entities) {
@@ -165,7 +172,7 @@ function frame(now) {
 
 function beginFrame(dt) {
     const { mouse, root } = state;
-    const EDGE = 20;
+    const EDGE = 30;
     const SPEED = 3;
     if (mouse.x - EDGE < 0) {
         panBy(-SPEED, 0);
@@ -208,7 +215,7 @@ function resolveVisible(sel) {
     const all = state.world?.entities ?? new Map();
     if (typeof sel === 'function') return Array.from(all.values()).filter(sel);
     if (Array.isArray(sel)) return sel;
-    return []; // по умолчанию ничего
+    return [];
 }
 
 function mapPass(entities) {
@@ -228,7 +235,21 @@ function overlayPass() {
     for (const { draw } of state.overlayLayers) draw(frame);
 }
 
-function endFrame(dt) { }
+function endFrame(dt) {
+    const now = performance.now();
+    const fps = 1000 / dt;
+    state.fpsSamples.push(fps);
+
+    if (state.fpsSamples.length > 60) {
+        state.fpsSamples.shift();
+    }
+
+    if (now - state._lastFpsReport > state.fpsReportEvery) {
+        const avg = state.fpsSamples.reduce((a, b) => a + b, 0) / state.fpsSamples.length;
+        state.onFps(Math.round(avg));
+        state._lastFpsReport = now;
+    }
+}
 
 export function addWorldLayer(order = 0, draw) {
     state.worldLayers.push({ order, draw });

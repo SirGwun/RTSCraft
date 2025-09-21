@@ -1,8 +1,9 @@
-import { Network } from './core/network.js';
+﻿import { Network } from './core/network.js';
 import { UI } from './ui/ui.js';
 import { init, start, state as renderState } from './render/render.js';
 import { World } from './data/world.js';
 import { Entity } from './data/entity.js';
+import { createModel } from './core/model.js';
 
 // === Config / Types ===
 const WS_PATH = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
@@ -79,9 +80,7 @@ function startTest() {
     const selection = { ids: new Set(), onChange: () => { } };
 
 
-    init({ mapCanvas, overlayCanvas, world, selection });
-
-    start();
+    init(mapCanvas, overlayCanvas, world, selection);
 }
 
 // === Commands buffer ===
@@ -145,7 +144,6 @@ class Selection {
     const ui = new UI();
     const commands = new CommandBus();
     const net = new Network();
-    renderState.onFps = fps => ui.setFps(fps);
 
     /** Wiring */
     const input = new Input(map, selection);
@@ -166,10 +164,13 @@ class Selection {
         net.sendJoin({ name, color });
     });
 
-    // FPS
-    renderState.onFps = fps => ui.setFps(fps);
-
     // старт теста рендера
     startTest();
+    renderState.onFps = fps => ui.setFps(fps);
 
+    const modelAPI = createModel({ world });
+    modelAPI.onTick((dt, stats) => { console.log(dt, stats) });
+    modelAPI.start();
+
+    start();
 })();

@@ -1,4 +1,4 @@
-// === Networking ===
+﻿// === Networking ===
 export class Network {
   /** @type {WebSocket|null} */         socket = null;
                                         pingPeriodMs = 2500;
@@ -48,7 +48,6 @@ export class Network {
     }
 
     _handlePong(msg) {
-        console.log("pong: ", msg);
         try {
             if (msg.type === 'pong' && typeof msg.clientTime === 'number') {
                 this.onPing(msg.serverTime - msg.clientTime);

@@ -42,7 +42,7 @@ export class UI {
 
         if (savedName) {
             this.joinOverlay.classList.add('hidden');
-            onJoin({ savedName, savedColor });
+            onJoin({ name: savedName, color: savedColor });
         }
         function isValidCssColor(value) {
             const s = new Option().style;
@@ -59,7 +59,7 @@ export class UI {
         this.hudPing.textContent = ms;
     }
     setFps /** @param {number} fps */(fps) {
-        this.hugFps.textContent = fps;
+        this.hudFps.textContent = fps;
     }
     setPlayers /** @param {number} n */(n) {
         this.hudPlayers.textContent = n;
