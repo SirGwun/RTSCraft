@@ -208,8 +208,9 @@ export function panBy(dx, dy) {
     const z = state.camera.zoom;
     const { minX: l, maxX: r, minY: b, maxY: t } = state.mapBorders;
     const { x, y } = state.camera;
-    if ((x > l || dx > 0) && (x < r || dx < 0)) state.camera.x += dx / z;
-    if ((y > b || dy > 0) && (y < t || dy < 0)) state.camera.y += dy / z;
+    console.log(screenToWorld(0, 0));
+    if ((x > l * z || dx > 0) && (x < r * z || dx < 0)) state.camera.x += dx / z;
+    if ((y > b * z || dy > 0) && (y < t * z || dy < 0)) state.camera.y += dy / z;
 }
 
 export function zoomAt(x, y, factor) {
@@ -280,7 +281,7 @@ function frame(now) {
 function beginFrame(dt) {
     const { mouse, root } = state;
     const EDGE = 30;
-    const SPEED = 3;
+    const SPEED = 30;
     console.log(state.camera.x, state.camera.y, state.inside);
 
     if (state.inside) {

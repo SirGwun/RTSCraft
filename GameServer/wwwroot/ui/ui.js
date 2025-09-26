@@ -62,38 +62,48 @@ export class UI {
 
         const savedName = localStorage.getItem('playerName') || '';
         const savedColor = localStorage.getItem('playerColor') || 'red';
+
         if (nameInput) nameInput.value = savedName;
         if (colorInput) colorInput.value = savedColor;
 
         this.joinForm.addEventListener('submit', (e) => {
             e.preventDefault();
 
-            onJoin({ name: savedName, color: savedColor });
-            this.hudFps.textContent = fps;
+            // берём свежие значения
+            let name = nameInput.value.trim();
+            let color = colorInput.value.trim();
 
+            // нормализуем имя
             name = name.slice(0, 16).replace(/[^\w\u0400-\u04FF -]/g, '');
             if (!name) name = 'Player';
 
+            // проверяем цвет
             if (!isValidCssColor(color)) color = 'red';
 
+            // сохраняем в localStorage
             localStorage.setItem('playerName', name);
             localStorage.setItem('playerColor', color);
 
+            // скрываем окно
             this.joinOverlay.classList.add('hidden');
+
+            // вызываем колбэк
             onJoin({ name, color });
         });
 
+        // автологин, если имя сохранено
         if (savedName) {
             this.joinOverlay.classList.add('hidden');
             onJoin({ name: savedName, color: savedColor });
         }
+
         function isValidCssColor(value) {
             const s = new Option().style;
-            s.color = '';
             s.color = value;
             return s.color !== '';
         }
     }
+
 
     setConnState /** @param {string} text */(text) {
         this.hudConn.textContent = text;
