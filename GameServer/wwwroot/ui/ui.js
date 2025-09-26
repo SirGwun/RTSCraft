@@ -1,4 +1,6 @@
 ﻿import { selection } from './selectionStore.js';
+import { state } from '../render/render.js';
+import { renderEntityCard } from '../data/entity.js';
 import { issue } from '../client.js';
 
 // === UI (HUD, inspector, join) ===
@@ -15,6 +17,31 @@ export class UI {
   /** @type {HTMLDivElement} */ joinOverlay = document.getElementById('join');
   /** @type {HTMLFormElement} */ joinForm = document.getElementById('joinForm');
 
+
+    init(world) {
+        this.showMouseCoord();
+        this.initSelectionPanel(world.entities);
+    }
+
+    showMouseCoord() {
+        const panel = document.getElementById('center');
+        panel.style.position = 'relative';
+        const mouseWindow = document.createElement('div');
+
+        mouseWindow.style.position = 'absolute';
+        mouseWindow.style.right = '10px';
+        mouseWindow.style.top = '10px';
+
+        window.addEventListener('mousemove', () => {
+            mouseWindow.innerHTML = `
+                                      <div>mouse: ${state.mouse.x} ${state.mouse.y}</div>
+                                      <div>camera: ${state.camera.x} ${state.camera.y}</div>`
+        });
+
+        panel.appendChild(mouseWindow);
+    }
+
+
     /**
      * 
      * @param {() => []} ent
@@ -23,7 +50,6 @@ export class UI {
         const panel = document.getElementById('selectionList');
 
         const handler = (selection) => {
-            console.log('handle');
             const { ids } = selection;
             panel.innerHTML = '';
 
@@ -31,17 +57,7 @@ export class UI {
             if (ids.length === 1) {
                 const entity = ent.get(ids[0]);
                 if (!entity) return;
-
-                const table = document.createElement('table');
-                for (const [key, value] of Object.entries(entity)) {
-                    if (key === 'x' || key === 'y' || key === 'w' || key === 'h' || key === 'collor') continue;
-                    if (typeof value === 'function') continue;
-                    const row = document.createElement('tr');
-                    row.innerHTML = `<td>${key}</td><td>${value}</td>`;
-                    table.appendChild(row);
-                }
-                panel.appendChild(table);
-                return;
+                panel.appendChild(renderEntityCard(entity));
             } else {
                 console.log(ids);
                 const table = document.createElement('table');

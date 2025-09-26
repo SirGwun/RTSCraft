@@ -123,7 +123,7 @@ export const issue = model.issue;
     const overlayCanvas = document.getElementById('overlay');
     initRender(mapCanvas, overlayCanvas, world, selection);
     renderState.onFps = fps => ui.setFps(fps);
-    ui.initSelectionPanel(world.entities);
+    ui.init(world);
     
     //model.onTick((dt, stats) => { console.log(dt, stats) });
     model.start();

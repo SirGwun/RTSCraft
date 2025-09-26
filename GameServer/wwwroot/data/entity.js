@@ -71,4 +71,55 @@ export class Entity {
     }
 }
 
-export default Entity;
+export function renderEntityCard(entity) {
+    const card = document.createElement('div');
+    card.style.display = 'grid';
+    card.style.gridTemplateColumns = '1fr 1fr';
+    card.style.gridTemplateRows = 'auto auto auto';
+    card.style.gap = '6px';
+    card.style.background = '#0f172a';
+
+    // имя (id)
+    const nameEl = document.createElement('div');
+    nameEl.textContent = entity.id;
+    nameEl.style.fontSize = '22px';
+    nameEl.style.gridColumn = '1 / span 2'; // растянуть на 2 колонки
+    nameEl.style.textAlign = 'left';
+    nameEl.style.fontWeight = 'bold';
+    card.appendChild(nameEl);
+
+    // тип
+    const typeEl = document.createElement('div');
+    typeEl.textContent = `Тип: ${entity.type}`;
+    typeEl.style.gridColumn = '1 / span 2';
+    typeEl.style.textAlign = 'left';
+    typeEl.style.fontSize = '13px';
+    typeEl.style.opacity = '0.85';
+    card.appendChild(typeEl);
+
+    // HP (по центру, крупнее)
+    const hpEl = document.createElement('div');
+    hpEl.textContent = `HP: ${entity.hp}`;
+    hpEl.style.gridColumn = '1 / span 2';
+    hpEl.style.textAlign = 'center';
+    hpEl.style.fontSize = '18px';
+    hpEl.style.fontWeight = 'bold';
+    card.appendChild(hpEl);
+
+    // координаты (слева внизу)
+    const coordEl = document.createElement('div');
+    coordEl.textContent = `(${entity.x}, ${entity.y})`;
+    coordEl.style.justifySelf = 'start';
+    coordEl.style.alignSelf = 'end';
+    card.appendChild(coordEl);
+
+    // хозяин (справа внизу)
+    const ownerEl = document.createElement('div');
+    ownerEl.textContent = `Владелец: ${entity.owner}`;
+    ownerEl.style.justifySelf = 'end';
+    ownerEl.style.alignSelf = 'end';
+    card.appendChild(ownerEl);
+
+    return card;
+}
+

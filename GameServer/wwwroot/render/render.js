@@ -123,7 +123,7 @@ export const state = {
                                         fpsReportEvery: 250,
                                         _lastFpsReport: 0,
                                         inside: false,
-                                        mapBorders: { minX: -100, maxX: 100, minY: -100, maxY: 100 }
+    worldBounds: { l: -1000, r: 1000, t: 1000, b: -1000 }
 };
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -161,7 +161,7 @@ export function init(mapCanvas, overlayCanvas, world, selection) {
         
         const factor = e.deltaY < 0 ? 1.1 : 0.9;
 
-        zoomAt(cx, cy, factor);
+        zoomAt(factor);
     }, { passive: false });
 
     addEventListener("mousemove", pos, false);
@@ -205,21 +205,22 @@ export function setCamera({ x, y, zoom }) {
 }
 
 export function panBy(dx, dy) {
-    const z = state.camera.zoom;
-    const { minX: l, maxX: r, minY: b, maxY: t } = state.mapBorders;
-    const { x, y } = state.camera;
-    console.log(screenToWorld(0, 0));
-    if ((x > l * z || dx > 0) && (x < r * z || dx < 0)) state.camera.x += dx / z;
-    if ((y > b * z || dy > 0) && (y < t * z || dy < 0)) state.camera.y += dy / z;
-}
+    const cam = state.camera;
+    const z = cam.zoom;
+    const b = state.worldBounds;
 
-export function zoomAt(x, y, factor) {
-    const pre = screenToWorld(x, y);
-    const newZoom = clamp(state.camera.zoom * factor, state.camera.minZoom, state.camera.maxZoom);
-    state.camera.zoom = newZoom;
-    const post = screenToWorld(x, y);
-    state.camera.x += pre.x - post.x;
-    state.camera.y += pre.y - post.y;
+    let nx = cam.x + dx / z;
+    let ny = cam.y + dy / z;
+
+    console.log("pan", nx, ny)
+
+    if (nx >= b.l && nx <= b.r) cam.x = nx;
+    if (ny >= b.b && ny <= b.t) cam.y = ny;
+}
+   
+
+export function zoomAt(factor) {
+     state.camera.zoom = clamp(state.camera.zoom * factor, state.camera.minZoom, state.camera.maxZoom);
 }
 
 export function screenToWorld(x, y) {
@@ -281,8 +282,7 @@ function frame(now) {
 function beginFrame(dt) {
     const { mouse, root } = state;
     const EDGE = 30;
-    const SPEED = 30;
-    console.log(state.camera.x, state.camera.y, state.inside);
+    const SPEED = 10;
 
     if (state.inside) {
         if (mouse.x - EDGE < 0) {
