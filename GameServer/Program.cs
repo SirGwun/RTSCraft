@@ -1,90 +1,41 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿// Program.cs
+using GameServer.Server.Infra;       // WebSocketAcceptor
+using GameServer.Server.Protocol;    // Json.Options, IMessageSerializer
+using GameServer.Server.Domain;      // IdGen, PlayerRegistry
+using GameServer.Server.Application; // SnapshotService
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Hosting;
-using System.Net.WebSockets;
-using System.Text;
-using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ---------- DI ----------
+builder.Services.AddSingleton<IMessageSerializer, SystemTextJsonSerializer>();
+
+builder.Services.AddSingleton<IdGen>();
+builder.Services.AddSingleton<PlayerRegistry>();
+builder.Services.AddSingleton<SnapshotService>();
+
+builder.Services.AddSingleton<WebSocketAcceptor>();
+
 var app = builder.Build();
 
-// если нужен HTTP без https при разработке через Aspire
-// (или задайте переменную в AppHost — см. шаг 3)
+// лог старта (как в старом Program.cs)
 app.Lifetime.ApplicationStarted.Register(() =>
     Console.WriteLine("GameServer started: " + app.Urls.FirstOrDefault())
 );
 
-// 1) Веб-сокеты
-app.UseWebSockets();
+// ---------- Middleware ----------
+app.UseWebSockets();       // WS как и раньше
+app.UseDefaultFiles();     // SPA: искать index.html в wwwroot
+app.UseStaticFiles();      // SPA: раздавать статику (js, css, assets)
 
-// 2) Отдача SPA из wwwroot
-app.UseDefaultFiles();   // ищет index.html по корню
-app.UseStaticFiles();    // раздаёт /client.js, картинки и т.д.
+// ---------- Endpoints ----------
+app.MapGet("/health", () => "OK"); // старый health
 
-app.MapGet("/health", () => "OK");
-// 3) Endpoint для WebSocket
-app.Map("/ws", async ctx =>
-{
-    if (!ctx.WebSockets.IsWebSocketRequest)
-    {
-        ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
-        return;
-    }
+// наш WS-эндпойнт → аккуратно отдаём в Acceptor
+app.Map("/ws", (HttpContext ctx, WebSocketAcceptor acceptor) => acceptor.AcceptAsync(ctx));
 
-    using var ws = await ctx.WebSockets.AcceptWebSocketAsync();
-    var buffer = new byte[4096];
-
-    while (true)
-    {
-        var result = await ws.ReceiveAsync(buffer, ctx.RequestAborted);
-        if (result.CloseStatus.HasValue)
-            break;
-
-        var json = System.Text.Encoding.UTF8.GetString(buffer, 0, result.Count);
-        try
-        {
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-            var type = root.GetProperty("type").GetString();
-
-            if (type == "join")
-            {
-                Console.WriteLine($"JOIN: {root}");
-            }
-            else if (type == "commands")
-            {
-                Console.WriteLine($"COMMANDS: {root}");
-            }
-            else if (type == "ping")
-            {
-                Console.WriteLine($"PING: {root}");
-                long tClient = doc.RootElement.TryGetProperty("clientTime", out var tEl) && tEl.TryGetInt64(out var tVal)
-                               ? tVal : 0;
-                var payload = new
-                {
-                    type = "pong",
-                    clientTime = tClient,
-                    serverTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-                };
-
-                var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(payload));
-                await ws.SendAsync(bytes, WebSocketMessageType.Text, true, ctx.RequestAborted);
-            }
-            else
-            {
-                Console.WriteLine($"UNKNOWN: {root}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("Bad JSON: " + ex.Message);
-        }
-    }
-
-    await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "done", ctx.RequestAborted);
-});
-
-// 4) Fallback для SPA-маршрутов (если позже добавите router)
+// fallback для SPA-маршрутов (если фронт роутит сам)
 app.MapFallbackToFile("/index.html");
 
+// ---------- Run ----------
 app.Run();
