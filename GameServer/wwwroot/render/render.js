@@ -1,5 +1,105 @@
 ﻿// @ts-check
 
+//TODO интерполяция
+/**
+ * Да, ты схватил идею точно: рисовать не «сырые» `x,y` из модели, а интерполированные координаты `lerp(prev -> curr, alpha)`, где `alpha` — сколько времени прошло с последнего тика модели относительно `fixedDt`. Тогда между двумя тиками (TPS) рендер (FPS) «втыкает» промежуточные позиции и движение выглядит гладко.
+
+Ниже — минимальный, практичный план внедрения под твой код.
+
+# Что добавить в модель
+
+1. При **спауне** сразу ставь «прошлые» координаты:
+
+```js
+// lifecycleSystem, при SPAWN_UNIT
+world.entities.set(id, {
+id, x: p.x, y: p.y, w: p.w, h: p.h,
+color: p.color || 'red',
+speed: p.speed ?? 60,
+// ↓ для интерполяции
+prevX: p.x, prevY: p.y,
+order: null
+});
+```
+
+2. В **движении** перед апдейтом позиции копируй текущие в prev:
+
+```js
+// movementSystem, перед изменением u.x/u.y
+u.prevX = u.x;
+u.prevY = u.y;
+// потом считаешь dx,dy и двигаешь u.x/u.y
+```
+
+3. Экспортируй **альфу** (прогресс с момента последнего тика):
+
+```js
+let lastTickAtMs = performance.now();
+
+api.tick = function(dtMs = fixedDtMs) {
+timeMs += dtMs;
+// ... системы ...
+lastTickAtMs = performance.now();
+};
+
+api.getInterpAlpha = () => {
+const since = performance.now() - lastTickAtMs;
+return Math.max(0, Math.min(1, since / fixedDtMs));
+};
+```
+
+# Как использовать в рендере / слоях
+
+Твой псевдокод слоя:
+
+```js
+addWorldLayer(0, ({ ctx, camera, entities }) => {
+const z = camera.zoom;
+for (const e of entities) {
+const s = worldToScreen(e.x, e.y);
+ctx.fillRect(s.x - (e.w*z)/2, s.y - (e.h*z)/2, e.w*z, e.h*z);
+}
+});
+```
+
+Станет таким (добавили `alpha` и лерп):
+
+```js
+addWorldLayer(0, ({ ctx, camera, entities, alpha }) => {
+const z = camera.zoom;
+
+for (const e of entities) {
+const px = e.prevX ?? e.x;
+const py = e.prevY ?? e.y;
+const ix = px + (e.x - px) * alpha;
+const iy = py + (e.y - py) * alpha;
+
+const s = worldToScreen(ix, iy);
+const w = e.w * z, h = e.h * z;
+ctx.fillStyle = e.color || 'red';
+ctx.fillRect(s.x - w/2, s.y - h/2, w, h);
+}
+});
+```
+
+Где брать `alpha`? В том месте, где ты вызываешь отрисовку слоёв, передавай:
+
+```js
+const alpha = model.getInterpAlpha(); // 0..1
+layer.draw({ ctx, camera, entities, alpha });
+```
+
+# Пара заметок, чтобы не споткнуться
+
+* Не мутируй позиции в рендере (никаких «кружков по орбите» в `drawPass`), вся логика движения — только в модели.
+* Сильно поднимать TPS — рабочий костыль, но это съедает CPU и не убирает микроджиттер таймеров. Интерполяция даёт ровность даже на 20–30 TPS.
+* `eps` можно держать небольшим (1–3 пикселя) — с интерполяцией финиш не будет «дёргаться».
+* Если захочешь идеал: переведи цикл модели на rAF + аккумулятор (`acc += frameDt; while (acc>=fixedDt) tick(fixedDt); alpha=acc/fixedDt`). Но даже с `setTimeout` интерполяция уже даёт заметно плавнее.
+
+Хочешь — на следующем шаге покажу «аккумуляторный» цикл и как из него бесплатно получать `alpha`, чтобы не трогать `performance.now()` внутри модели.
+
+ */
+
 export const state = {
   /** @type {HTMLCanvasElement|null} */ mapCanvas: null,
   /** @type {HTMLCanvasElement|null} */ overlayCanvas: null,
@@ -17,12 +117,13 @@ export const state = {
   /** @type {{w:number,h:number}} */    viewport: { w: 0, h: 0 },
                                         camera: { x: 0, y: 0, zoom: 1, minZoom: 0.25, maxZoom: 6 },
                                         mouse: { x: 0, y: 0, inView: false, buttons: 0 },
-                                        root: { width: 0, hidth: 0 },
+                                        root: { width: 0, height: 0 },
   /** @type {(fps:number)=>void} */     onFps: () => { },
                                         fpsSamples: [],
                                         fpsReportEvery: 250,
-                                        _lastFpsReport: 0
-
+                                        _lastFpsReport: 0,
+                                        inside: false,
+                                        mapBorders: { minX: -100, maxX: 100, minY: -100, maxY: 100 }
 };
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -44,6 +145,10 @@ export function init(mapCanvas, overlayCanvas, world, selection) {
 
     state._onResize = resize;
     window.addEventListener("resize", state._onResize);
+    const windowRoot = document.getElementById('root');
+    if (!windowRoot) throw new Error("Render.init: html 'root' not found");
+    windowRoot.addEventListener('pointerenter', () => { state.inside = true; });
+    windowRoot.addEventListener('pointerleave', () => { state.inside = false; });
     resize();
 
     state.mapCanvas.addEventListener("wheel", e => {
@@ -64,7 +169,7 @@ export function init(mapCanvas, overlayCanvas, world, selection) {
     addWorldLayer(-100, ({ ctx, camera }) => {
         drawGrid(32, ctx, camera);
     });
-    //
+
     addWorldLayer(0, ({ ctx, camera, entities }) => {
         const z = camera.zoom;
         for (const e of entities) {
@@ -101,8 +206,10 @@ export function setCamera({ x, y, zoom }) {
 
 export function panBy(dx, dy) {
     const z = state.camera.zoom;
-    state.camera.x += dx / z;
-    state.camera.y += dy / z;
+    const { minX: l, maxX: r, minY: b, maxY: t } = state.mapBorders;
+    const { x, y } = state.camera;
+    if ((x > l || dx > 0) && (x < r || dx < 0)) state.camera.x += dx / z;
+    if ((y > b || dy > 0) && (y < t || dy < 0)) state.camera.y += dy / z;
 }
 
 export function zoomAt(x, y, factor) {
@@ -128,7 +235,7 @@ export function worldToScreen(x, y) {
 
 export function resize() {
     const { width: rootW, height: rootH } = document.getElementById('root').getBoundingClientRect();
-    state.root.hidth = rootH;
+    state.root.height = rootH;
     state.root.width = rootW;
 
     state.dpr = window.devicePixelRatio || 1;
@@ -174,16 +281,20 @@ function beginFrame(dt) {
     const { mouse, root } = state;
     const EDGE = 30;
     const SPEED = 3;
-    if (mouse.x - EDGE < 0) {
-        panBy(-SPEED, 0);
-    } else if (mouse.x + EDGE > root.width) {
-        panBy(SPEED, 0);
-    }
+    console.log(state.camera.x, state.camera.y, state.inside);
 
-    if (mouse.y - EDGE < 0) {
-        panBy(0, -SPEED);
-    } else if (mouse.y + EDGE > root.hidth) {
-        panBy(0, SPEED);
+    if (state.inside) {
+        if (mouse.x - EDGE < 0) {
+            panBy(-SPEED, 0);
+        } else if (mouse.x + EDGE > root.width) {
+            panBy(SPEED, 0);
+        }
+
+        if (mouse.y - EDGE < 0) {
+            panBy(0, -SPEED);
+        } else if (mouse.y + EDGE > root.height) {
+            panBy(0, SPEED);
+        }
     }
 }
 

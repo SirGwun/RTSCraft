@@ -1,3 +1,5 @@
+﻿import { selection } from './selectionStore.js';
+import { issue } from '../client.js';
 
 // === UI (HUD, inspector, join) ===
 export class UI {
@@ -12,6 +14,47 @@ export class UI {
   /** @type {HTMLElement} */ log = document.getElementById('log');
   /** @type {HTMLDivElement} */ joinOverlay = document.getElementById('join');
   /** @type {HTMLFormElement} */ joinForm = document.getElementById('joinForm');
+
+    /**
+     * 
+     * @param {() => []} ent
+     */
+    initSelectionPanel(ent) {
+        const panel = document.getElementById('selectionList');
+
+        const handler = (selection) => {
+            console.log('handle');
+            const { ids } = selection;
+            panel.innerHTML = '';
+
+            if (!ids.length) return;
+            if (ids.length === 1) {
+                const entity = ent.get(ids[0]);
+                if (!entity) return;
+
+                const table = document.createElement('table');
+                for (const [key, value] of Object.entries(entity)) {
+                    if (key === 'x' || key === 'y' || key === 'w' || key === 'h' || key === 'collor') continue;
+                    if (typeof value === 'function') continue;
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td>${key}</td><td>${value}</td>`;
+                    table.appendChild(row);
+                }
+                panel.appendChild(table);
+                return;
+            } else {
+                console.log(ids);
+                const table = document.createElement('table');
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${ids}</td>`;
+                table.appendChild(row);
+                panel.appendChild(table);
+            }
+        }
+
+        handler(selection.get());
+        selection.onChange(handler);
+    }
 
     bindJoin/** @param {(data:{name:string,color:string})=>void} onJoin */(onJoin) {
         const nameInput = document.getElementById('playerName');

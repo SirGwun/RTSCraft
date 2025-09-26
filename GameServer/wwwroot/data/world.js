@@ -1,16 +1,7 @@
-// World module
-// ESM compatible: default and named export
-
-/**
+﻿/**
  * @typedef {{x:number,y:number}} Vec2
- * @typedef {{id:string,name?:string}} Player
- * @typedef {{
- *   id:string,
- *   owner?:string,
- *   type?:string,
- *   pos?:Vec2,
- *   [k:string]: any
- * }} Entity
+ * @typedef {{id:string, name?:string}} Player
+ * @typedef {{id:string, x:number, y:number, w:number, h:number, color:string, speed?:number, owner:string, type:string, hp:number}} Entity
  * @typedef {{
  *   time?:number,
  *   myId?:string,

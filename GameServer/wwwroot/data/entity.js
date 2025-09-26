@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @typedef {{x:number,y:number}} Vec2
  */
 
@@ -11,10 +11,12 @@ export class Entity {
   /** @type {number} */ h;
   /** @type {number} */ hp;
   /** @type {string} */ owner;
+  /** @type {number} */ speed;
   /** @type {string} */ color;
+  /** @type {boolean} */ selectable
 
     /**
-     * @param {{id:string,type:string,x:number,y:number,w:number,h:number,hp:number,owner:string,color?:string}} data
+     * @param {{id:string,type:string,x:number,y:number,w:number,h:number,hp:number,owner:string, speed?:number, color?:string,selectable?:boolean}} data
      */
     constructor(data) {
         this.id = data.id;
@@ -25,7 +27,12 @@ export class Entity {
         this.h = data.h;
         this.hp = data.hp;
         this.owner = data.owner;
+        this.speed = data.speed || 0;
         this.color = data.color || "red";
+        this.selectable = data.selectable
+            || data.type.startsWith('unit') 
+            || data.type.startsWith('building') 
+            || data.type.startsWith('resource');
     }
 
     /** @returns {Vec2} */
