@@ -115,7 +115,7 @@ export const state = {
   /** @type {any} */                    selection: null,
   /** @type {{w:number,h:number}} */    ort: { w: 0, h: 0 },
   /** @type {{w:number,h:number}} */    viewport: { w: 0, h: 0 },
-                                        camera: { x: 0, y: 0, zoom: 1, minZoom: 0.25, maxZoom: 6 },
+                                        camera: { x: 0, y: 0, zoom: 1, minZoom: 0.5, maxZoom: 4 },
                                         mouse: { x: 0, y: 0, inView: false, buttons: 0 },
                                         root: { width: 0, height: 0 },
   /** @type {(fps:number)=>void} */     onFps: () => { },
@@ -123,7 +123,7 @@ export const state = {
                                         fpsReportEvery: 250,
                                         _lastFpsReport: 0,
                                         inside: false,
-    worldBounds: { l: -1000, r: 1000, t: 1000, b: -1000 }
+    worldBounds: { l: -300, r: 300, t: 300, b: -300 }
 };
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));

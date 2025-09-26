@@ -49,6 +49,11 @@ export function init(canvas, model, entities, ui, owner) {
         return { kind, id: top.id, entity: top };
     };
 
+    const isOwned = (id) => {
+        for (const e of entities()) if (e.id === id) return e.owner === owner.id;
+        return false;
+    };
+
     const selectInRect = (wminx, wmaxx, wminy, wmaxy, additive) => {
         const pick = [];
         for (const e of entities()) {
@@ -72,7 +77,7 @@ export function init(canvas, model, entities, ui, owner) {
 
     const selectSingle = (x, y, additive) => {
         const hit = hitTestPoint(x, y);
-        if (hit.kind === 'ally' && hit.id != null) {
+        if (hit.id) {
             if (additive) {
                 const has = selection.get().ids.includes(hit.id);
                 has ? selection.del(hit.id) : selection.add(hit.id);
@@ -117,25 +122,26 @@ export function init(canvas, model, entities, ui, owner) {
         //ПКМ
         if (e.button === 2) {
             const { ids } = selection.get();
-            if (ids.length) {
+            const ownedIds = ids.filter(isOwned);
+            if (ownedIds.length && lastMove) {
                 const target = lastMove
                     ? hitTestPoint(lastMove.wx, lastMove.wy)
                     : { kind: 'ground' };
 
                 if (mode === 'attackMove') {
                     if (target.kind === 'ground') {
-                        issue.move(ids, { x: lastMove.wx, y: lastMove.wy }, { attackMove: true });
+                        issue.move(ownedIds, { x: lastMove.wx, y: lastMove.wy }, { attackMove: true });
                     } else {
-                        issue.attack(ids, target.id);
+                        if (target.id != null) issue.attack(ownedIds, target.id);
                     }
                     mode = 'default';
                 } else {
                     if (target.kind === 'enemy' && target.id != null) {
-                        issue.attack(ids, target.id);
+                        issue.attack(ownedIds, target.id);
                     } else if (target.kind === 'resource' && target.id != null) {
-                        issue.harvest(ids, target.id);
+                        issue.harvest(ownedIds, target.id);
                     } else {
-                        issue.moveLine(ids, { x: lastMove.wx, y: lastMove.wy });
+                        issue.moveLine(ownedIds, { x: lastMove.wx, y: lastMove.wy });
                     }
                 }
             }
@@ -177,7 +183,8 @@ export function init(canvas, model, entities, ui, owner) {
 
         if (e.key === 's' || e.key === 'S') {
             const { ids } = selection.get();
-            if (ids.length) issue.stop(ids);
+            const ownedIds = ids.filter(isOwned); 
+            if (ownedIds.length) issue.stop(ownedIds); 
         }
     };
 

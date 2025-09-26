@@ -170,7 +170,6 @@ export function createModel({ world, tps = 20 } = {}) {
 function lifecycleSystem(ctx) {
     const { commands, world, emit } = ctx;
     for (const cmd of commands) {
-       
             if (cmd.type === 'SPAWN_UNIT') {
                 const p = cmd.props;
                 const id = p.id ?? String(Math.random());
@@ -196,14 +195,12 @@ function lifecycleSystem(ctx) {
                     emit({ type: 'UnitKilled', id: cmd.id });
                 }
             }
-        
     }
 }
 
 function ordersSystem(ctx) {
     const { commands, world } = ctx;
     for (const cmd of commands) {
-        
             if (cmd.type === 'MOVE_LINE' || cmd.type === 'MOVE') {
                 const unit = world.entities.get(cmd.id);
                 if (unit) {

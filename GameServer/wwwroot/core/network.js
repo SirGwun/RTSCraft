@@ -31,6 +31,9 @@ export class Network {
         const type = msg?.type;
 
         switch (type) {
+            case 'command':
+                this._handleCommand(msg);
+                break;
             case 'snapshot':
                 this._handleSnapshot(msg);
                 break;
@@ -53,6 +56,23 @@ export class Network {
                 this.onPing(msg.serverTime - msg.clientTime);
             }
         } catch { }
+    }
+
+    _handleCommand(msg) {
+        if (msg.type !== 'command') {
+            this._handleUnknown(msg);
+            return;
+        }
+        const cmd = msg.cmd;
+        const type = cmd.type;
+
+        switch (type) {
+
+        }
+    }
+
+    _handleUnknown(msg) {
+        console.log('Uncnown server message: ', msg);
     }
 
     _startPing() {
