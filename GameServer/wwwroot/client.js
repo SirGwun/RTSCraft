@@ -35,17 +35,6 @@ class GameClient {
     onEvent /** @param {{type:string, [k:string]:any}} evt */(evt) { }
 }
 
-
-// === Commands buffer ===
-class CommandBus {
-  /** @type {Array<any>} */ queue = [];
-  /** @type {(cmds:any[])=>void} */ flushHandler = () => { };
-
-    enqueue /** @param {any} cmd */(cmd) { }
-    flush() { }
-    clear() { }
-}
-
 /** DOM */
 const map = /** @type {HTMLCanvasElement} */ (document.getElementById('map'));
 const overlay = /** @type {HTMLCanvasElement} */ (document.getElementById('overlay'));
@@ -136,3 +125,18 @@ export const issue = model.issue;
     model.issue.spawnUnit({ id: 'u2', type: 'unit_peasant', x: 94, y: 94, w: 24, h: 24, color: 'orange', speed: 80, owner: Player.id });
     start();
 })();
+
+export class CommandBuf {
+    hi = []; // SYNC, системные
+    lo = []; // пользовательские, предикт
+
+    enqueue(cmd, prio = 'lo') {
+        (prio === 'hi' ? this.hi : this.lo).push(cmd);
+    }
+    drain() {
+        const a = this.hi; this.hi = [];
+        const b = this.lo; this.lo = [];
+        return a.concat(b);
+    }
+}
+

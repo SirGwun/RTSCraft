@@ -1,4 +1,5 @@
 ﻿import { Entity } from '../data/entity.js';
+import { World } from '../data/world.js';
 
 /**
  * @typedef {{id?:string, x:number, y:number, w:number, h:number, color?:string, speed?:number, owner?:string, type?:string, hp?:number}} SpawnProps

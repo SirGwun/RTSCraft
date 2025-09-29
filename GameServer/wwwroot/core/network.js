@@ -1,4 +1,5 @@
 ﻿// === Networking ===
+import { onSnapshot } from './synchronizer.js';
 export class Network {
   /** @type {WebSocket|null} */         socket = null;
                                         pingPeriodMs = 2500;
@@ -27,13 +28,14 @@ export class Network {
 
     _routeMessage(raw) {
         let msg;
-        try { msg = JSON.parse(raw); } catch { return; }
+        try { msg = JSON.parse(raw); }
+        catch {
+            console.log('Не удалось распарсить сообщение', raw);
+            return;
+        }
         const type = msg?.type;
 
         switch (type) {
-            case 'command':
-                this._handleCommand(msg);
-                break;
             case 'snapshot':
                 this._handleSnapshot(msg);
                 break;
@@ -50,25 +52,18 @@ export class Network {
 
     }
 
+    _handleSnapshot(msg) {
+        if (this._validateSnapshot(msg)) {
+            onSnapshot(msg);
+        }
+    } 
+
     _handlePong(msg) {
         try {
             if (msg.type === 'pong' && typeof msg.clientTime === 'number') {
                 this.onPing(msg.serverTime - msg.clientTime);
             }
         } catch { }
-    }
-
-    _handleCommand(msg) {
-        if (msg.type !== 'command') {
-            this._handleUnknown(msg);
-            return;
-        }
-        const cmd = msg.cmd;
-        const type = cmd.type;
-
-        switch (type) {
-
-        }
     }
 
     _handleUnknown(msg) {
@@ -135,5 +130,9 @@ export class Network {
         } else {
             console.log("Connection is not open")
         }
+    }
+
+    _validateSnapshot(msg) {
+        return true;
     }
 }

@@ -1,6 +1,6 @@
 ﻿import { selection } from './selectionStore.js';
 import { state } from '../render/render.js';
-import { renderEntityCard } from '../data/entity.js';
+import { Entity } from '../data/entity.js';
 import { issue } from '../client.js';
 
 // === UI (HUD, inspector, join) ===
@@ -44,20 +44,24 @@ export class UI {
 
     /**
      * 
-     * @param {() => []} ent
+     * @param {() => Entity[]} ent
      */
     initSelectionPanel(ent) {
         const panel = document.getElementById('selectionList');
 
+        /**
+        * @param {selection} selection
+        */
         const handler = (selection) => {
-            const { ids } = selection;
+            if (!panel) return;
+            const { ids } = selection.get();
             panel.innerHTML = '';
 
             if (!ids.length) return;
             if (ids.length === 1) {
-                const entity = ent.get(ids[0]);
+                const entity = ent()[0];
                 if (!entity) return;
-                panel.appendChild(renderEntityCard(entity));
+                panel.appendChild(entity.renderEntityCard());
             } else {
                 console.log(ids);
                 const table = document.createElement('table');
@@ -68,11 +72,12 @@ export class UI {
             }
         }
 
-        handler(selection.get());
+        handler(selection);
         selection.onChange(handler);
     }
 
-    bindJoin/** @param {(data:{name:string,color:string})=>void} onJoin */(onJoin) {
+    /** @param {(data:{name:string,color:string})=>void} onJoin */
+    bindJoin(onJoin) {
         const nameInput = document.getElementById('playerName');
         const colorInput = document.getElementById('playerColor');
 
