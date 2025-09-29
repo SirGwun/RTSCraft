@@ -1,8 +1,9 @@
 ﻿import { Entity } from '../data/entity.js';
 import { World } from '../data/world.js';
+import { commandBuf, issue } from '../client.js';
 
 /**
- * @typedef {{id?:string, x:number, y:number, w:number, h:number, color?:string, speed?:number, owner?:string, type?:string, hp?:number}} SpawnProps
+ * @typedef {{x:number, y:number, w:number, h:number, color?:string, speed?:number, owner?:string, type?:string, hp?:number}} SpawnProps
  */
 
 /**
@@ -25,65 +26,40 @@ import { World } from '../data/world.js';
 
 export function createModel({ world, tps = 20 } = {}) {
     let running = false;
+    let timerId = null;
+
+    let seq = 0;
+
+    /** @type {Command[]} */
+    let pending = [];
+    let toTick = [];
+
+    const eventListeners = new Set();
+    const eventThisTick = new Set();
+
     const fixedDtMs = 1000 / tps;
     let timeMs = 0;
     const listeners = new Set();
-    /** @type {Command[]} */
-    let commandQueue = [];
-    const eventListeners = new Set();
-    const eventThisTick = new Set();
+
     const stats = {
         lastTickMs: 0,
         tpsBudgetMs: 0,
         perSystemMs: {}
     };
 
-    let timerId = null;
-
     const api = {
         issue: {
-            /**
-           * @param {SpawnProps} props
-           */
-            spawnUnit: (props) => commandQueue.push({ type: 'SPAWN_UNIT', props }),
+            // CLIENTSIDE
+            move: (ids, target, mode) => makeCommand(clientsideCommand, 'MOVE', ids, { target, mode }),
+            moveLine: (ids, target, mode) => makeCommand(clientsideCommand, 'MOVE_LINE', ids, { target, mode }),
+            stop: (ids) => makeCommand(clientsideCommand, 'STOP', ids),
+            attack: (ids, target) => makeCommand(clientsideCommand, 'ATTACK', ids, { target }),
+            sinc: (newUnitSt, oldUnitSt, sincSteps) => toTick.push({ type: 'SINC', newlUnitSt, oldUnitSt, sincSteps }),
 
-            /**
-            * @param {string} id
-            */
-            killUnit: (id) => commandQueue.push({ type: 'KILL_UNIT', id }),
-
-            /**
-             * @param {string[]|string} ids
-             * @param {any} target
-             * @param {any} mode
-             */
-            move: (ids, target, mode) => {
-                const arr = Array.isArray(ids) ? ids : [ids];
-                for (const id of arr) {
-                    commandQueue.push({ type: 'MOVE', id, target, mode });
-                }
-            }, 
-           /**
-           * @param {string[]|string} ids
-           * @param {{x:number,y:number}} target
-           * @param {number} speed
-           */
-            moveLine: (ids, target, mode) => {
-                const arr = Array.isArray(ids) ? ids : [ids];
-                for (const id of arr) {
-                    commandQueue.push({ type: 'MOVE_LINE', id, target, mode });
-                }
-            },
-
-            /**
-            * @param {string[]|string} ids
-            */
-            stop: (ids) => {
-                const arr = Array.isArray(ids) ? ids : [ids];
-                for (const id of arr) {
-                    commandQueue.push({ type: 'STOP', id });
-                }
-            },
+            // SERVERSIDE
+            spawnUnit: (props) => serversideCommand({ type: 'SPAWN_UNIT', props }),
+            killUnit: (unit) => serversideCommand({ type: 'KILL_UNIT', unit }),
+            dealDamage: (target) => serversideCommand({ type: 'DEAL_DAMAGE', target }),
         },
 
         onEvent,
@@ -102,14 +78,16 @@ export function createModel({ world, tps = 20 } = {}) {
         tick(dtMs = fixedDtMs) {
             timeMs += dtMs;
 
-            const commands = commandQueue;
-            commandQueue = [];
+            const commands = commandBuf.drain().concat(toTick);
+            toTick = [];
 
             const ctx = { world, commands, emit, dt: dtMs / 1000, now: timeMs, stats };
 
+            timeIt('Sinc', () => sincronizeSystem(ctx));
             timeIt('Lifecycle', () => lifecycleSystem(ctx));
             timeIt('Orders', () => ordersSystem(ctx));
             timeIt('Movement', () => movementSystem(ctx));
+            timeIt('Profiling', () => profilingSystem(ctx));
 
             if (eventThisTick.size > 0) {
                 for (const listener of eventListeners) for (const event of eventThisTick) {
@@ -139,11 +117,33 @@ export function createModel({ world, tps = 20 } = {}) {
         const t1 = performance.now();
 
         stats.lastTickMs = t1 - t0;
+        //todo динамически менять tps смотря по загрузке
         stats.tpsBudgetMs = fixedDtMs - stats.lastTickMs;
 
         const delay = Math.max(0, fixedDtMs - stats.lastTickMs);
         timerId = setTimeout(loop, delay);
     }
+
+    function clientsideCommand(cmd) {
+        cmd.seq = ++seq;
+        Network.toSend(cmd);
+        pending.push(cmd);
+        toTick.push(cmd);
+    }
+
+    function serversideCommand(cmd) {
+        cmd.seq = ++seq;
+        Network.toSend(cmd);
+    }
+
+    function makeCommand(emit, type, ids, extras = {}) {
+        const arr = Array.isArray(ids) ? ids : [ids];
+        for (const id of arr) {
+            if (id == null) continue;
+            emit({ ...extras, type, id });
+        }
+    }
+
 
     /**
      * @param {(ev:ModelEvent)=>void} cb
@@ -167,6 +167,23 @@ export function createModel({ world, tps = 20 } = {}) {
 
     return api;
 }
+
+function sincronizeSystem(ctx) {
+    const { commands, world } = ctx;
+    for (const cmd of commands) {
+        if (cmd.type !== 'SINC') continue;
+        const { oldUnitSt: old, newUnitSt: nw, sincSteps: step } = cmd;
+        const unit = world.entities.get(old.id);
+
+        unit.sincOrder = {
+            x: nw.x,
+            y: nw.y,
+            step
+        };
+    }
+}
+
+
 
 function lifecycleSystem(ctx) {
     const { commands, world, emit } = ctx;
@@ -228,6 +245,19 @@ function ordersSystem(ctx) {
 function movementSystem(ctx) {
     const { world, emit, dt } = ctx;
     for (const u of world.entities.values()) {
+        if (u.sincOrder) {
+            let { x, y, step } = u.sincOrder;
+            if (step <= 0) {
+                u.sincOrder = null;
+            } else {
+                const nx = u.x + (x - u.x) / step;
+                const ny = u.y + (y - u.y) / step;
+                u.setPos(nx, ny);
+                u.sincOrder.step = step - 1;
+                continue;
+            }
+        }
+
         if (u.order && u.order.type === 'MoveLine') {
             const { x: tx, y: ty } = u.order.target;
             const dx = tx - u.x, dy = ty - u.y;

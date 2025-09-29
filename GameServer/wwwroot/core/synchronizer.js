@@ -13,7 +13,7 @@ export class Synchronizer {
     }
 
     onSnapshot(snap) {
-        const lastAckSeq = snap.lastAckSeq; 
+        const lastAckSeq = snap.lastAckSeq;
         if (lastAckSeq) {
             model.sqush(lastAckSeq);
         }
@@ -24,7 +24,7 @@ export class Synchronizer {
                 : Object.values(snap.entities);
             for (const e of list) {
                 if (!e || !e.id) continue;
-                const prev = this.entities.get(e.id) || { id: e.id }; 
+                const prev = this.entities.get(e.id) || { id: e.id };
                 this.model.sinc(prev, e);
                 this.world.entities.set(e.id, { ...prev, ...e });
             }
@@ -32,19 +32,9 @@ export class Synchronizer {
     }
 
 
-
-// Players
-if (snap.players) {
-    const list = Array.isArray(snap.players)
-        ? snap.players
-        : Object.values(snap.players);
-    for (const p of list) {
-        if (p && p.id) this.players.set(p.id, { ...this.players.get(p.id), ...p });
-    }
-}
-
-
     updateWorld(newData) {
-
+        /**
+         * Если расположения и размера по юниту отличаются - определяем шаги синхронизации и вызываем sinc, если нет - просто обновляем данные
+         */
     }
 }

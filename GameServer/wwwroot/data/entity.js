@@ -14,8 +14,8 @@ export class Entity {
   /** @type {number} */ speed;
   /** @type {string} */ color;
   /** @type {boolean} */ selectable;
-    moveOrder = {};
-    sincOrder = {};
+    moveOrder = null;
+    sincOrder = null;
     prevState = {}; 
 
     /**

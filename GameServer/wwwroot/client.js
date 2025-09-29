@@ -126,7 +126,7 @@ export const issue = model.issue;
     start();
 })();
 
-export class CommandBuf {
+class CommandBuf {
     hi = []; // SYNC, системные
     lo = []; // пользовательские, предикт
 
@@ -139,4 +139,5 @@ export class CommandBuf {
         return a.concat(b);
     }
 }
+export const commandBuf = new CommandBuf();
 
