@@ -35,20 +35,34 @@ class GameClient {
     onEvent /** @param {{type:string, [k:string]:any}} evt */(evt) { }
 }
 
+class CommandBuf {
+    hi = []; // SYNC, системные
+    lo = []; // пользовательские, предикт
+
+    enqueue(cmd, prio = 'lo') {
+        (prio === 'hi' ? this.hi : this.lo).push(cmd);
+    }
+    drain() {
+        const a = this.hi; this.hi = [];
+        const b = this.lo; this.lo = [];
+        return a.concat(b);
+    }
+}
+
 /** DOM */
 const map = /** @type {HTMLCanvasElement} */ (document.getElementById('map'));
 const overlay = /** @type {HTMLCanvasElement} */ (document.getElementById('overlay'));
 
 /** Core */
-const world = new World();
+export const world = new World();
 const model = createModel({ world, tps: 150 });
-const ui = new UI();
-const commands = new CommandBus();
-const net = new Network();
-
-let Player = { id: '', name: '', color: '', gold: 0, wood: 0 };
-
+export const ui = new UI();
+export const commands = new CommandBuf();
+export const net = new Network();
 export const issue = model.issue;
+export let Players = {};
+export let Player = { id: '', name: '', color: '', gold: 0, wood: 0 };
+
 
 // === Bootstrap ===
 (function bootstrap() {
@@ -62,8 +76,8 @@ export const issue = model.issue;
 
     // wiring
     ui.bindJoin(({ name, color }) => {
-        Player = { id: Math.floor(Math.random() * 100000000), name, color, gold: 0, wood: 0 };
-        net.connect(WS_PATH);
+        Player = { id: '', name, color, gold: 0, wood: 0 };
+        net.connect();
         net.sendJoin({ name, color });
     });
 
@@ -125,19 +139,4 @@ export const issue = model.issue;
     model.issue.spawnUnit({ id: 'u2', type: 'unit_peasant', x: 94, y: 94, w: 24, h: 24, color: 'orange', speed: 80, owner: Player.id });
     start();
 })();
-
-class CommandBuf {
-    hi = []; // SYNC, системные
-    lo = []; // пользовательские, предикт
-
-    enqueue(cmd, prio = 'lo') {
-        (prio === 'hi' ? this.hi : this.lo).push(cmd);
-    }
-    drain() {
-        const a = this.hi; this.hi = [];
-        const b = this.lo; this.lo = [];
-        return a.concat(b);
-    }
-}
-export const commandBuf = new CommandBuf();
 

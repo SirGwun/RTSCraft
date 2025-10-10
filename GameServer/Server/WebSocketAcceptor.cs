@@ -1,20 +1,19 @@
-using System.Net.WebSockets;
+﻿using System.Net.WebSockets;
 using Microsoft.AspNetCore.Http;
 using GameServer.Server.Protocol;
 using GameServer.Server.Domain;
-using GameServer.Server.Application;
 
-namespace GameServer.Server.Infra;
+namespace GameServer.Server;
 
 public sealed class WebSocketAcceptor
 {
-    private readonly IMessageSerializer _serializer;
+    private readonly SystemTextJsonSerializer _serializer;
     private readonly IdGen _ids;
     private readonly PlayerRegistry _players;
     private readonly SnapshotService _snapshots;
 
     public WebSocketAcceptor(
-        IMessageSerializer serializer,
+        SystemTextJsonSerializer serializer,
         IdGen ids,
         PlayerRegistry players,
         SnapshotService snapshots)

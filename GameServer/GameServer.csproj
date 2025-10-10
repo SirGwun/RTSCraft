@@ -12,11 +12,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Game\Command\" />
     <Folder Include="Game\Units\" />
-    <Folder Include="Server\Infra\" />
     <Folder Include="Server\Domain\" />
-    <Folder Include="Server\Application\" />
   </ItemGroup>
 
 </Project>

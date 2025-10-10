@@ -1,40 +1,39 @@
-﻿import { client } from '../client.js';
-import { Model } from './model.js';
+﻿import { Player, Players } from '../client.js';
 import { World } from '../data/world.js';
+import { Model } from './core/model.js';
 
-export class Synchronizer {
-    world;
-    model;
+/** @type { World }*/
+let world;
+let model;
 
+export function initSynchronizer(w, m) {
+    world = w;
+    model = m;
+}
 
-    constructor(world, model) {
-        this.world = world;
-        this.model = model;
-    }
-
-    onSnapshot(snap) {
-        const lastAckSeq = snap.lastAckSeq;
-        if (lastAckSeq) {
-            model.sqush(lastAckSeq);
-        }
-
-        if (snap.entities) {
-            const list = Array.isArray(snap.entities)
-                ? snap.entities
-                : Object.values(snap.entities);
-            for (const e of list) {
-                if (!e || !e.id) continue;
-                const prev = this.entities.get(e.id) || { id: e.id };
-                this.model.sinc(prev, e);
-                this.world.entities.set(e.id, { ...prev, ...e });
-            }
-        }
+export function onSnapshot(snap) {
+    if (snap.MyId && Player.id !== snap.MyId) {
+        Player.id = snap.MyId;
+        world.myId = String(snap.MyId);
+        world.setPlayers(snap.Players);
     }
 
 
-    updateWorld(newData) {
-        /**
-         * Если расположения и размера по юниту отличаются - определяем шаги синхронизации и вызываем sinc, если нет - просто обновляем данные
-         */
+
+    const lastAckSeq = snap.lastAckSeq;
+    if (lastAckSeq) {
+        model.sqush(lastAckSeq);
+    }
+
+    if (snap.entities) {
+        const list = Array.isArray(snap.entities)
+            ? snap.entities
+            : Object.values(snap.entities);
+        for (const e of list) {
+            if (!e || !e.id) continue;
+            const prev = this.entities.get(e.id) || { id: e.id };
+            this.model.sinc(prev, e);
+            this.world.entities.set(e.id, { ...prev, ...e });
+        }
     }
 }

@@ -2,17 +2,7 @@
  * @typedef {{x:number,y:number}} Vec2
  * @typedef {{id:string|number, name?:string}} PlayerIn   // вход из снапшота
  * @typedef {{id:string|number, x:number, y:number, w:number, h:number, color:string, speed?:number, owner:string|number, type:string, hp:number}} EntityIn
- * @typedef {{
- *   time?:number,
- *   myId?:string|number,
- *   players?: PlayerIn[] | Record<string, PlayerIn>,
- *   entities?: EntityIn[] | Record<string, EntityIn>
- * }} Snapshot
- */
-
-/** Внутренние типы храним уже со строковыми id */
-/// <typedef {{id:string, name?:string}} Player>
-/// <typedef {{id:string, x:number, y:number, w:number, h:number, color:string, speed?:number, owner:string, type:string, hp:number, selectable?:boolean}} Entity>
+/**/
 
 export class World {
   /** @type {number} */ time = 0;
@@ -67,6 +57,19 @@ export class World {
             }
         }
     }
+
+    setPlayers(players) {
+        const list = Array.isArray(snap.players) ? snap.players : Object.values(snap.players);
+        for (const p of list) {
+            if (!p) continue;
+            const pid = p.id != null ? String(p.id) : undefined;
+            if (!pid) continue;
+            const prev = this.players.get(pid) || { id: pid };
+            this.players.set(pid, { ...prev, ...p, id: pid });
+        }
+    }
+
+    setEntities()
 
     /** @returns {Player|null} */
     getMyPlayer() {

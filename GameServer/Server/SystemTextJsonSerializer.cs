@@ -3,10 +3,10 @@ using System.Text;
 using System.Text.Json;
 using GameServer.Server.Protocol;
 
-namespace GameServer.Server.Infra;
+namespace GameServer.Server;
 using GameServer.Server.Protocol;
 
-public sealed class SystemTextJsonSerializer : IMessageSerializer
+public sealed class SystemTextJsonSerializer
 {
     public object Deserialize(string json)
     {
@@ -33,7 +33,6 @@ public sealed class SystemTextJsonSerializer : IMessageSerializer
 
             if (result.MessageType != WebSocketMessageType.Text)
             {
-                // Дочитываем до конца бинарного сообщения и возвращаем "no-op"
                 if (!result.EndOfMessage)
                 {
                     do { result = await socket.ReceiveAsync(buffer, ct); }

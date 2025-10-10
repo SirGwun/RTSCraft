@@ -1,14 +1,13 @@
-using System.Net.WebSockets;
+п»їusing System.Net.WebSockets;
 using GameServer.Server.Protocol;
 using GameServer.Server.Domain;
-using GameServer.Server.Application;
 
-namespace GameServer.Server.Infra;
+namespace GameServer.Server;
 
-public sealed class WebSocketSession : ISender
+public sealed class WebSocketSession
 {
     private readonly WebSocket _socket;
-    private readonly IMessageSerializer _serializer;
+    private readonly SystemTextJsonSerializer _serializer;
     private readonly IdGen _ids;
     private readonly PlayerRegistry _players;
     private readonly SnapshotService _snapshots;
@@ -17,7 +16,7 @@ public sealed class WebSocketSession : ISender
 
     public WebSocketSession(
         WebSocket socket,
-        IMessageSerializer serializer,
+        SystemTextJsonSerializer serializer,
         IdGen ids,
         PlayerRegistry players,
         SnapshotService snapshots)
@@ -38,8 +37,8 @@ public sealed class WebSocketSession : ISender
             while (!ct.IsCancellationRequested && _socket.State == WebSocketState.Open)
             {
                 var msg = await _serializer.ReceiveAsync(_socket, buffer, ct);
-                if (msg is null) break;                                  // Close
-                if (msg is MsgBase { Type: null }) continue;              // бинарь/мусор
+                if (msg is null) break;                               
+                if (msg is MsgBase { Type: null }) continue;              
 
                 switch (msg)
                 {
@@ -52,23 +51,18 @@ public sealed class WebSocketSession : ISender
                         break;
 
                     case JoinMsg join:
-                        // 1) Генерим серверный id
                         var id = _ids.Next();
 
-                        // 2) Регистрируем игрока в реестре
                         _players.Add(new Player { Id = id, Name = join.Name, Color = join.Color });
 
-                        // 3) Привязываем id к сессии (пригодится для команд/очистки)
                         PlayerId = id;
 
                         Console.WriteLine($"[JOIN] #{id} name='{join.Name}' color='{join.Color}'");
 
-                        // 4) Отправляем первоначальный snapshot с myId
                         await _snapshots.SendInitialAsync(this, id, ct);
                         break;
 
                     default:
-                        // другие типы пока игнорируем
                         break;
                 }
             }
@@ -76,11 +70,10 @@ public sealed class WebSocketSession : ISender
         finally
         {
             await SafeCloseAsync(ct);
-            if (PlayerId is long pid) _players.Remove(pid); // отписка при разрыве
+            if (PlayerId is long pid) _players.Remove(pid);
         }
     }
 
-    // Реализация ISender — просто делегируем сериализатору
     public Task SendAsync(object payload, CancellationToken ct)
         => _serializer.SendAsync(_socket, payload, ct);
 

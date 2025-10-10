@@ -1,16 +1,16 @@
-using GameServer.Server.Domain;
+п»їusing GameServer.Server.Domain;
 using GameServer.Server.Protocol;
 
-namespace GameServer.Server.Application;
+namespace GameServer.Server;
 
-/// <summary>Собирает и отправляет начальный snapshot сразу после join.</summary>
+/// <summary>РЎРѕР±РёСЂР°РµС‚ Рё РѕС‚РїСЂР°РІР»СЏРµС‚ РЅР°С‡Р°Р»СЊРЅС‹Р№ snapshot СЃСЂР°Р·Сѓ РїРѕСЃР»Рµ join.</summary>
 public sealed class SnapshotService
 {
     private readonly PlayerRegistry _players;
 
     public SnapshotService(PlayerRegistry players) => _players = players;
 
-    public Task SendInitialAsync(ISender sender, long myId, CancellationToken ct)
+    public Task SendInitialAsync(WebSocketSession sender, long myId, CancellationToken ct)
     {
         var players = _players
             .Snapshot()
@@ -25,12 +25,13 @@ public sealed class SnapshotService
                 )
             );
 
+
         var msg = new SnapshotMsg
         {
             Time = UnixMs.Now(),
             MyId = myId,
             Players = players,
-            Entities = new Dictionary<long, EntityDto>() // позже заполним из авторитетного мира
+            Entities = new Dictionary<long, EntityDto>() // РїРѕР·Р¶Рµ Р·Р°РїРѕР»РЅРёРј РёР· Р°РІС‚РѕСЂРёС‚РµС‚РЅРѕРіРѕ РјРёСЂР°
         };
 
         return sender.SendAsync(msg, ct);

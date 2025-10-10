@@ -1,3 +1,5 @@
+using GameServer.Game.Command;
+
 namespace GameServer.Server.Protocol;
 
 /// <summary>
@@ -36,6 +38,16 @@ public record SnapshotMsg : MsgBase
     public long MyId { get; init; }
     public Dictionary<long, PlayerDto> Players { get; init; } = new();
     public Dictionary<long, EntityDto> Entities { get; init; } = new();
+}
+
+public record CommandMsg : MsgBase
+{
+    public string Type { get; init; } = "cmd";
+
+    public ICommand Command { get; init; } 
+
+
+    public CommandMsg(ICommand command) => Command = command;
 }
 
 public record PlayerDto(long Id, string Name, string Color, int Gold, int Wood);

@@ -1,5 +1,6 @@
 ﻿// === Networking ===
 import { onSnapshot } from './synchronizer.js';
+import { Player } from '../client.js';
 export class Network {
   /** @type {WebSocket|null} */         socket = null;
                                         pingPeriodMs = 2500;
@@ -106,6 +107,15 @@ export class Network {
         this.onState('closed');
     }
 
+    toSend(type, payload) {
+        if (this.socket?.readyState === WebSocket.OPEN) {
+            this.socket.send(JSON.stringify({ type type, ...payload }));
+        }
+        else {
+            console.log("Connection is not open")
+        }
+    }
+
     /** @param {{name:string,color:string}} payload */
     sendJoin(payload) {
         if (this.socket?.readyState === WebSocket.OPEN) {
@@ -114,10 +124,10 @@ export class Network {
             console.log("Connection is not open")
         }
     }
-    /** @param {Array<any>} cmds */
-    sendCommands(cmds) {
+    /** @param {any} cmd */
+    sendCommand(cmd) {
         if (this.socket?.readyState === WebSocket.OPEN) {
-            this.socket.send(JSON.stringify({ type: "commands", items: cmds }));
+            this.socket.send(JSON.stringify({ type: "command", ...cmd }));
         } else {
             console.log("Connection is not open")
         }

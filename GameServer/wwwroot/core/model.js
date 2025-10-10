@@ -1,6 +1,6 @@
 ﻿import { Entity } from '../data/entity.js';
 import { World } from '../data/world.js';
-import { commandBuf, issue } from '../client.js';
+import { commands, issue, net } from '../client.js';
 
 /**
  * @typedef {{x:number, y:number, w:number, h:number, color?:string, speed?:number, owner?:string, type?:string, hp?:number}} SpawnProps
@@ -54,7 +54,7 @@ export function createModel({ world, tps = 20 } = {}) {
             moveLine: (ids, target, mode) => makeCommand(clientsideCommand, 'MOVE_LINE', ids, { target, mode }),
             stop: (ids) => makeCommand(clientsideCommand, 'STOP', ids),
             attack: (ids, target) => makeCommand(clientsideCommand, 'ATTACK', ids, { target }),
-            sinc: (newUnitSt, oldUnitSt, sincSteps) => toTick.push({ type: 'SINC', newlUnitSt, oldUnitSt, sincSteps }),
+            sinc: (newUnitSt, oldUnitSt, sincSteps) => toTick.push({ type: 'SINC', newUnitSt, oldUnitSt, sincSteps }),
 
             // SERVERSIDE
             spawnUnit: (props) => serversideCommand({ type: 'SPAWN_UNIT', props }),
@@ -126,14 +126,14 @@ export function createModel({ world, tps = 20 } = {}) {
 
     function clientsideCommand(cmd) {
         cmd.seq = ++seq;
-        Network.toSend(cmd);
+        net.sendCommand(cmd);
         pending.push(cmd);
         toTick.push(cmd);
     }
 
     function serversideCommand(cmd) {
         cmd.seq = ++seq;
-        Network.toSend(cmd);
+        net.sendCommand(cmd);
     }
 
     function makeCommand(emit, type, ids, extras = {}) {
@@ -276,4 +276,8 @@ function movementSystem(ctx) {
             u.y += (dy / dist) * step;
         }
     }
+}
+
+function profilingSystem(ctx) {
+
 }
