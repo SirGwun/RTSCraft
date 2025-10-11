@@ -10,13 +10,13 @@ public sealed class WebSocketAcceptor
     private readonly SystemTextJsonSerializer _serializer;
     private readonly IdGen _ids;
     private readonly PlayerRegistry _players;
-    private readonly SnapshotService _snapshots;
+    private readonly Sendler _snapshots;
 
     public WebSocketAcceptor(
         SystemTextJsonSerializer serializer,
         IdGen ids,
         PlayerRegistry players,
-        SnapshotService snapshots)
+        Sendler snapshots)
     {
         _serializer = serializer;
         _ids = ids;

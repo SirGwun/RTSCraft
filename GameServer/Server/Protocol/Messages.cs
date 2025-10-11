@@ -1,17 +1,17 @@
-using GameServer.Game.Command;
+п»їusing GameServer.Game.Command;
 
 namespace GameServer.Server.Protocol;
 
 /// <summary>
-/// Базовый конверт для всех сообщений: содержит только тип.
-/// Сначала парсим в MsgBase, читаем Type, потом — во второй проход в конкретный DTO.
+/// Р‘Р°Р·РѕРІС‹Р№ РєРѕРЅРІРµСЂС‚ РґР»СЏ РІСЃРµС… СЃРѕРѕР±С‰РµРЅРёР№: СЃРѕРґРµСЂР¶РёС‚ С‚РѕР»СЊРєРѕ С‚РёРї.
+/// РЎРЅР°С‡Р°Р»Р° РїР°СЂСЃРёРј РІ MsgBase, С‡РёС‚Р°РµРј Type, РїРѕС‚РѕРј вЂ” РІРѕ РІС‚РѕСЂРѕР№ РїСЂРѕС…РѕРґ РІ РєРѕРЅРєСЂРµС‚РЅС‹Р№ DTO.
 /// </summary>
 public record MsgBase
 {
     public string? Type { get; init; }
 }
 
-// Примеры конкретных сообщений:
+// РџСЂРёРјРµСЂС‹ РєРѕРЅРєСЂРµС‚РЅС‹С… СЃРѕРѕР±С‰РµРЅРёР№:
 public record PingMsg : MsgBase
 {
     public long ClientTime { get; init; }
@@ -28,16 +28,25 @@ public record PongMsg : MsgBase
     public long ServerTime { get; init; }
     public long ClientTime { get; init; }
 }
-// ... MsgBase, PingMsg, PongMsg, JoinMsg — уже есть ...
+// ... MsgBase, PingMsg, PongMsg, JoinMsg вЂ” СѓР¶Рµ РµСЃС‚СЊ ...
 
-/// <summary>Первичный снапшот состояния, который клиент ждёт сразу после join.</summary>
+/// <summary>РџРµСЂРІРёС‡РЅС‹Р№ СЃРЅР°РїС€РѕС‚ СЃРѕСЃС‚РѕСЏРЅРёСЏ, РєРѕС‚РѕСЂС‹Р№ РєР»РёРµРЅС‚ Р¶РґС‘С‚ СЃСЂР°Р·Сѓ РїРѕСЃР»Рµ join.</summary>
 public record SnapshotMsg : MsgBase
 {
     public string Type { get; init; } = "snapshot";
-    public long Time { get; init; }
+    public long lastAckSeq { get; init; } = 0; // РџРѕРєР° РЅРµ РёСЃРїРѕР»СЊР·СѓРµРј, РЅРѕ РєР»РёРµРЅС‚ Р¶РґС‘С‚.
+    public long ServerTime { get; init; }
     public long MyId { get; init; }
     public Dictionary<long, PlayerDto> Players { get; init; } = new();
     public Dictionary<long, EntityDto> Entities { get; init; } = new();
+}
+
+public record InitMsg : MsgBase
+{
+    public string Type { get; init; } = "init";
+    public long MyId { get; init; }
+    public long ServerTime { get; init; }
+    public Dictionary<long, PlayerDto> Players { get; init; } = new();
 }
 
 public record CommandMsg : MsgBase
@@ -52,7 +61,7 @@ public record CommandMsg : MsgBase
 
 public record PlayerDto(long Id, string Name, string Color, int Gold, int Wood);
 
-// Пока сущностей нет — держим DTO на будущее, клиенту формат уже привычен.
+// РџРѕРєР° СЃСѓС‰РЅРѕСЃС‚РµР№ РЅРµС‚ вЂ” РґРµСЂР¶РёРј DTO РЅР° Р±СѓРґСѓС‰РµРµ, РєР»РёРµРЅС‚Сѓ С„РѕСЂРјР°С‚ СѓР¶Рµ РїСЂРёРІС‹С‡РµРЅ.
 public record EntityDto(
     long Id, string Type, double X, double Y, double W, double H,
     int Hp, long Owner, double Speed, string Color, bool Selectable

@@ -1,7 +1,7 @@
 ﻿import { Network } from './core/network.js';
 import { UI } from './ui/ui.js';
 import { init as initInput } from './ui/input.js';
-import { init as initRender, start, state as renderState } from './render/render.js';
+import { init as initRender, startRender, state as renderState } from './render/render.js';
 import { World } from './data/world.js';
 import { Entity } from './data/entity.js';
 import { createModel } from './core/model.js';
@@ -55,7 +55,8 @@ const overlay = /** @type {HTMLCanvasElement} */ (document.getElementById('overl
 
 /** Core */
 export const world = new World();
-const model = createModel({ world, tps: 150 });
+export const model = createModel({ world });
+
 export const ui = new UI();
 export const commands = new CommandBuf();
 export const net = new Network();
@@ -68,20 +69,35 @@ export let Player = { id: '', name: '', color: '', gold: 0, wood: 0 };
 (function bootstrap() {
     net.onSnapshot = snap => {
         world.applySnapshot(snap);
-        ui.setPlayers(world.palyers.size);
+        ui.setPlayers(world.players.size);
     };
+
     net.onEvent = evt => ui.pushLog(JSON.stringify(evt));
     net.onPing = ms => ui.setPing(ms + "ms");
     net.onState = st => ui.setConnState(st);
 
-    // wiring
+    initRender(document.getElementById('overlay'), document.getElementById('overlay'), world, selection);
+    renderState.onFps = fps => ui.setFps(fps);
+
+    ui.init(world);
+
+    model.onTick(() => { ++nTick });
+    model.onEvent(ev => console.log('[MODEL EVT]', ev));
+    initInput(map, model, () => Array.from(world.entities.values()), ui, Player);
+
     ui.bindJoin(({ name, color }) => {
         Player = { id: '', name, color, gold: 0, wood: 0 };
         net.connect();
         net.sendJoin({ name, color });
     });
 
-    // старт теста рендера
+    makeTestUnits();
+    model.start();
+
+    startRender();
+})();
+
+function makeTestUnits() {
     world.upsertEntity(new Entity({
         id: 'unit1',
         type: 'unit_peasant',
@@ -122,21 +138,6 @@ export let Player = { id: '', name: '', color: '', gold: 0, wood: 0 };
         speed: 90,
         color: 'blue'
     }));
-    const mapCanvas = document.getElementById('map');
-    const overlayCanvas = document.getElementById('overlay');
-    initRender(mapCanvas, overlayCanvas, world, selection);
-    renderState.onFps = fps => ui.setFps(fps);
-    ui.init(world);
-    
-    //model.onTick((dt, stats) => { console.log(dt, stats) });
-    model.start();
-
-    model.issue.spawnUnit({ id: 'u1', type: 'unit_peasant', x: 64, y: 64, w: 24, h: 24, color: 'orange', speed: 80 });
-    model.issue.moveLine(['u1'], { x: 260, y: 200 }, 80);
-    model.onEvent(ev => console.log('[MODEL EVT]', ev));
-    initInput(map, model, () => Array.from(world.entities.values()), ui, Player);
 
     model.issue.spawnUnit({ id: 'u2', type: 'unit_peasant', x: 94, y: 94, w: 24, h: 24, color: 'orange', speed: 80, owner: Player.id });
-    start();
-})();
-
+}

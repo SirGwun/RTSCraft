@@ -1,39 +1,68 @@
-﻿import { Player, Players } from '../client.js';
+﻿import { Player, Players, model as mainModel, world as mainWorld} from '../client.js';
 import { World } from '../data/world.js';
-import { Model } from './core/model.js';
+import { createModel } from './model.js'; 
 
-/** @type { World }*/
-let world;
-let model;
-
-export function initSynchronizer(w, m) {
-    world = w;
-    model = m;
-}
+let tempModel;
 
 export function onSnapshot(snap) {
-    if (snap.MyId && Player.id !== snap.MyId) {
-        Player.id = snap.MyId;
-        world.myId = String(snap.MyId);
-        world.setPlayers(snap.Players);
+    if (!snap.lastAckSeq) return;
+    if (snap.myId && Player.id !== snap.myId) {
+        Player.id = snap.myId;
+        mainWorld.myId = String(snap.myId);
+        mainWorld.setPlayers(snap.players);
     }
 
+    const newWorld = new World(snap);
+    const notApliedCommands = mainModel.cutPending(snap.lastAckSeq);
 
-
-    const lastAckSeq = snap.lastAckSeq;
-    if (lastAckSeq) {
-        model.sqush(lastAckSeq);
+    if (notApliedCommands.length > 0 && snap.serverTime) {
+        if (tempModel) tempModel.stop(); //если окажется что модель не успевает - достать состояние мира на момент остановки и слить его с серверной симуляцией (пока что не нужно)
+        tempModel = createModel({ world: newWorld });
+        tempModel.startSimulation(snap.serverTime, notApliedCommands, sincWorld);
+    } else {
+        sincWorld(newWorld);
     }
+}
 
-    if (snap.entities) {
-        const list = Array.isArray(snap.entities)
-            ? snap.entities
-            : Object.values(snap.entities);
-        for (const e of list) {
-            if (!e || !e.id) continue;
-            const prev = this.entities.get(e.id) || { id: e.id };
-            this.model.sinc(prev, e);
-            this.world.entities.set(e.id, { ...prev, ...e });
+/**
+ * @param {World} newWorld
+ */
+function sincWorld(newWorld) {
+    const SINC_STEPS = 3; //можно динамически определять смотря по различию
+
+    for (const [id, newU] of newWorld.entities) {
+        const oldU = mainWorld.entities.get(id);
+        // (spawn/kill) происходят отдельными коммандами от сервера - в снапшоты они не попадут
+        if (!oldU) {
+            mainModel.issue.spawnUnit(newU);
+        }
+        if (changed(newU, oldU)) {
+            mainModel.issue.sinc(
+                newU,
+                oldU,
+                SINC_STEPS
+            );
+        }
+        for (const [k, v] of Object.entries(pickInstantStats(newU))) {
+            if (v !== undefined) oldU[k] = v;
         }
     }
+}
+
+
+function changed(a, b) {
+    return a.x !== b.x ||
+        a.y !== b.y;
+}
+
+/**
+ * @param {import('../data/entity.js').Entity} u
+ * @returns
+ */
+function pickInstantStats(u) {
+    return {
+        id: u.id, hp: u.hp,
+        w: u.w, h: u.h, owner: u.owner,
+        speed: u.speed, color: u.color 
+    };
 }

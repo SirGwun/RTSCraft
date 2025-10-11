@@ -9,7 +9,7 @@ builder.Services.AddSingleton<SystemTextJsonSerializer>();
 
 builder.Services.AddSingleton<IdGen>();
 builder.Services.AddSingleton<PlayerRegistry>();
-builder.Services.AddSingleton<SnapshotService>();
+builder.Services.AddSingleton<Sendler>();
 builder.Services.AddSingleton<WebSocketAcceptor>();
 
 var app = builder.Build();

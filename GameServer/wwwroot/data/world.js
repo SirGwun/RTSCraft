@@ -1,60 +1,34 @@
-﻿/**
- * @typedef {{x:number,y:number}} Vec2
- * @typedef {{id:string|number, name?:string}} PlayerIn   // вход из снапшота
- * @typedef {{id:string|number, x:number, y:number, w:number, h:number, color:string, speed?:number, owner:string|number, type:string, hp:number}} EntityIn
-/**/
+﻿import { Entity } from './entity.js';
+import { Player } from './player.js';
 
 export class World {
-  /** @type {number} */ time = 0;
-  /** @type {Map<string, Player>} */ players = new Map();
-  /** @type {Map<string, Entity>} */ entities = new Map();
-  /** @type {string|null} */ myId = null;
+    /** @type {number} */
+    time = 0;
 
-  // Back-compat: alias с опечаткой
-  /** @returns {Map<string, Player>} */ get palyers() { return this.players; }
+    /** @type {Map<string, Player>} */
+    players = new Map();
+    /** @type {Map<string, Entity>} */
+    entities = new Map();
+    myId = '';
 
-    /** @param {Snapshot=} seed */
+    /** @returns {Map<string, Player>} */
+    getPlayers() { return this.players; }
+
+    /** @param {Snapshot} seed */
     constructor(seed) { if (seed) this.applySnapshot(seed); }
 
-    /**
-     * Apply partial or full snapshot. Non-specified fields remain.
-     * Replaces/merges only items present in the snapshot.
-     * @param {Snapshot} snap
-     */
+
     applySnapshot(snap) {
         if (!snap || typeof snap !== 'object') return;
 
         if (typeof snap.time === 'number') this.time = snap.time;
 
-        // myId: приводим к строке, если пришло число
         if (typeof snap.myId === 'string' || typeof snap.myId === 'number') {
             this.myId = String(snap.myId);
         }
 
-        // Players
-        if (snap.players) {
-            const list = Array.isArray(snap.players) ? snap.players : Object.values(snap.players);
-            for (const p of list) {
-                if (!p) continue;
-                const pid = p.id != null ? String(p.id) : undefined;
-                if (!pid) continue;
-                const prev = this.players.get(pid) || { id: pid };
-                this.players.set(pid, { ...prev, ...p, id: pid });
-            }
-        }
-
-        // Entities
         if (snap.entities) {
-            const list = Array.isArray(snap.entities) ? snap.entities : Object.values(snap.entities);
-            for (const e of list) {
-                if (!e) continue;
-                const eid = e.id != null ? String(e.id) : undefined;
-                if (!eid) continue;
-                const prev = this.entities.get(eid) || { id: eid };
-                // owner тоже нормализуем в строку
-                const owner = /** @type {any} */(e).owner != null ? String((/** @type {any} */(e)).owner) : prev.owner;
-                this.entities.set(eid, { ...prev, ...e, id: eid, owner });
-            }
+            this.setEntities(snap.entities);
         }
     }
 
@@ -69,7 +43,18 @@ export class World {
         }
     }
 
-    setEntities()
+    setEntities(entities) {
+        const list = Array.isArray(entities) ? entities : Object.values(entities);
+        for (const e of list) {
+            if (!e) continue;
+            const eid = e.id != null ? String(e.id) : undefined;
+            if (!eid) continue;
+            const prev = this.entities.get(eid) || { id: eid };
+
+            const owner = (e).owner != null ? String(((e)).owner) : prev.owner;
+            this.entities.set(eid, { ...prev, ...e, id: eid, owner });
+        }
+    }
 
     /** @returns {Player|null} */
     getMyPlayer() {
@@ -88,7 +73,6 @@ export class World {
     /** @param {string} id @returns {Entity|null} */
     getEntity(id) { return this.entities.get(id) || null; }
 
-    /** Convenience helpers */
     /** @param {EntityIn} e */
     upsertEntity(e) {
         if (!e || e.id == null) return;
@@ -98,12 +82,9 @@ export class World {
         this.entities.set(id, { ...prev, ...e, id, owner });
     }
 
-  /** @param {string} id */ removeEntity(id) { this.entities.delete(id); }
-
+    /** @param {string} id */ removeEntity(id) { this.entities.delete(id); }
     clear() { this.players.clear(); this.entities.clear(); this.time = 0; this.myId = null; }
 }
 
 export default World;
 
-// Debug tip (временно):
-// В начале applySnapshot добавь: console.log('applySnapshot myId =', snap.myId);

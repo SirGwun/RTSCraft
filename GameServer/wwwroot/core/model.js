@@ -24,7 +24,7 @@ import { commands, issue, net } from '../client.js';
  */
 
 
-export function createModel({ world, tps = 20 } = {}) {
+export function createModel({ world, tps = 100 } = {}) {
     let running = false;
     let timerId = null;
 
@@ -39,6 +39,7 @@ export function createModel({ world, tps = 20 } = {}) {
 
     const fixedDtMs = 1000 / tps;
     let timeMs = 0;
+    const isSimulation = false;
     const listeners = new Set();
 
     const stats = {
@@ -70,6 +71,14 @@ export function createModel({ world, tps = 20 } = {}) {
             loop();
         },
 
+        startSimulation(startTime, commands, endOfsimulation) {
+            if (running) stop();
+            isSimulation = true;
+            running = true;
+            toTick = commands.slice();
+            simulationLoop(startTime, endOfsimulation);
+        },
+
         stop() {
             running = false;
             if (timerId !== null) { clearTimeout(timerId); timerId = null; }
@@ -78,7 +87,10 @@ export function createModel({ world, tps = 20 } = {}) {
         tick(dtMs = fixedDtMs) {
             timeMs += dtMs;
 
-            const commands = commandBuf.drain().concat(toTick);
+            let commands;
+            if (isSimulation) commands = toTick.slice();
+            else commands = commandBuf.drain().concat(toTick);  
+
             toTick = [];
 
             const ctx = { world, commands, emit, dt: dtMs / 1000, now: timeMs, stats };
@@ -101,6 +113,15 @@ export function createModel({ world, tps = 20 } = {}) {
             }
         },
 
+        getPeding() { return pending.slice(); },
+
+        cutPending(lastAckSeq) {
+            const rest = [];
+            for (const cmd of pending) if (cmd.seq > lastAckSeq) rest.push(cmd);
+            pending = rest;
+            return rest.slice();
+        }
+
         /**
          * @param {Function} f
          */
@@ -122,6 +143,34 @@ export function createModel({ world, tps = 20 } = {}) {
 
         const delay = Math.max(0, fixedDtMs - stats.lastTickMs);
         timerId = setTimeout(loop, delay);
+    }
+
+    /**
+     * @param {Number} startTime
+     * @param {Function} endOfSimulation
+     */
+    // Try to use web workers if simulation were to slow
+    function simulationLoop(startTime, onDone) {
+        if (!running) return;
+        let ticks = 0;
+
+        function step() {
+            const budgetMs = 10;
+            const t0 = performance.now();
+
+            while (performance.now() - t0 < budgetMs) {
+                const tickNeeded = Math.floor((Date.now() - startTime) / fixedDtMs);
+                if (ticks >= tickNeeded) break;
+                api.tick(fixedDtMs);
+                ticks++;
+            }
+
+            const moreToDo = ticks < Math.floor((Date.now() - startTime) / fixedDtMs);
+            if (moreToDo) setTimeout(step, 0);
+            else onDone(world);
+        }
+
+        step();
     }
 
     function clientsideCommand(cmd) {
@@ -174,7 +223,7 @@ function sincronizeSystem(ctx) {
         if (cmd.type !== 'SINC') continue;
         const { oldUnitSt: old, newUnitSt: nw, sincSteps: step } = cmd;
         const unit = world.entities.get(old.id);
-
+        //возможно нужно синхронизировать не только местоположение
         unit.sincOrder = {
             x: nw.x,
             y: nw.y,
@@ -209,11 +258,13 @@ function lifecycleSystem(ctx) {
             if (cmd.type === 'KILL_UNIT') {
                 const unit = world.entities.get(cmd.id);
                 if (unit) {
-                    world.entities.delite(cmd.id);
+                    world.entities.delete(cmd.id);
                     emit({ type: 'UnitKilled', id: cmd.id });
                 }
             }
     }
+
+    //нужна ли здесь проверка на смерть юнитов?
 }
 
 function ordersSystem(ctx) {

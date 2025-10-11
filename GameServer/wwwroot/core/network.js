@@ -1,10 +1,11 @@
 ﻿// === Networking ===
 import { onSnapshot } from './synchronizer.js';
-import { Player } from '../client.js';
+import { world } from '../client.js';
+import { Player } from '../data/player.js';
 export class Network {
   /** @type {WebSocket|null} */         socket = null;
                                         pingPeriodMs = 2500;
-                                        _pingTimer = null;
+                                        _pingTimer = 0;
   /** @type {(snap:Snapshot)=>void} */  onSnapshot = () => { };
   /** @type {(evt:any)=>void} */        onEvent = () => { };
   /** @type {(ms:number)=>void} */      onPing = () => { };
@@ -40,9 +41,8 @@ export class Network {
             case 'snapshot':
                 this._handleSnapshot(msg);
                 break;
-            case 'event':
-                this._handleEvent(msg);
-                break;
+            case 'init':
+                this._applyInit(msg);
             case 'pong':
                 this._handlePong(msg);
                 break;
@@ -58,6 +58,14 @@ export class Network {
             onSnapshot(msg);
         }
     } 
+
+    _applyInit(msg) {
+        const myid = msg.myId;
+        const serverTime = msg.serverTime;
+        const players = msg.players;
+
+        world.setPlayers(players.map(p => new Player(p.id, p.name, p.color, p.gold, p.wood)));
+    }
 
     _handlePong(msg) {
         try {
@@ -80,16 +88,16 @@ export class Network {
     _stopPing() {
         if (this._pingTimer) {
             clearInterval(this._pingTimer);
-            this._pingTimer = null;
+            this._pingTimer = 0;
         }
     }
 
     close() {
-        if (this._pingTimer != null) {
+        if (this._pingTimer != 0) {
             clearInterval(this._pingTimer);
-            this._pingTimer = null;
+            this._pingTimer = 0;
         }
-        this._lastPingT = null;
+        this._lastPingT = 0;
 
         if (this.socket) {
             try {

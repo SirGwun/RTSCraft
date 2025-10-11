@@ -10,7 +10,7 @@ public sealed class WebSocketSession
     private readonly SystemTextJsonSerializer _serializer;
     private readonly IdGen _ids;
     private readonly PlayerRegistry _players;
-    private readonly SnapshotService _snapshots;
+    private readonly Sendler _snapshots;
 
     public long? PlayerId { get; private set; }
 
@@ -19,7 +19,7 @@ public sealed class WebSocketSession
         SystemTextJsonSerializer serializer,
         IdGen ids,
         PlayerRegistry players,
-        SnapshotService snapshots)
+        Sendler snapshots)
     {
         _socket = socket;
         _serializer = serializer;

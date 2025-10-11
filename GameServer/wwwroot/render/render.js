@@ -185,7 +185,7 @@ function pos(e) {
     state.mouse.x = e.clientX;
     state.mouse.y = e.clientY;
 }
-export function start() {
+export function startRender() {
     if (state.running) return;
     state.running = true;
     state.last = performance.now();
