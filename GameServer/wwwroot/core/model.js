@@ -1,6 +1,6 @@
 ﻿import { Entity } from '../data/entity.js';
 import { World } from '../data/world.js';
-import { commands, issue, net } from '../client.js';
+import { commandBuf, issue, net } from '../client.js';
 
 /**
  * @typedef {{x:number, y:number, w:number, h:number, color?:string, speed?:number, owner?:string, type?:string, hp?:number}} SpawnProps
@@ -120,7 +120,7 @@ export function createModel({ world, tps = 100 } = {}) {
             for (const cmd of pending) if (cmd.seq > lastAckSeq) rest.push(cmd);
             pending = rest;
             return rest.slice();
-        }
+        },
 
         /**
          * @param {Function} f

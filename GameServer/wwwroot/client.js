@@ -58,7 +58,7 @@ export const world = new World();
 export const model = createModel({ world });
 
 export const ui = new UI();
-export const commands = new CommandBuf();
+export const commandBuf = new CommandBuf();
 export const net = new Network();
 export const issue = model.issue;
 export let Players = {};
@@ -81,7 +81,6 @@ export let Player = { id: '', name: '', color: '', gold: 0, wood: 0 };
 
     ui.init(world);
 
-    model.onTick(() => { ++nTick });
     model.onEvent(ev => console.log('[MODEL EVT]', ev));
     initInput(map, model, () => Array.from(world.entities.values()), ui, Player);
 

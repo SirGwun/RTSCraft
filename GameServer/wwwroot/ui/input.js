@@ -77,7 +77,7 @@ export function init(canvas, model, entities, ui, owner) {
 
     const selectSingle = (x, y, additive) => {
         const hit = hitTestPoint(x, y);
-        if (hit.id) {
+        if (hit && hit.id != null) {                 
             if (additive) {
                 const has = selection.get().ids.includes(hit.id);
                 has ? selection.del(hit.id) : selection.add(hit.id);
@@ -88,6 +88,7 @@ export function init(canvas, model, entities, ui, owner) {
             selection.clear();
         }
     };
+
 
     const onPointerDown = (e) => {
         //ЛКМ
@@ -104,51 +105,54 @@ export function init(canvas, model, entities, ui, owner) {
     };
 
     const onPointerUp = (e) => {
-        //ЛКМ
-        if (e.button === 0 && downPt) {
-            const additive = e.shiftKey || e.ctrlKey;
-            if (dragging && lastMove) {
-                // рамочка
-                const wminx = Math.min(lastMove.wx, downPt.wx);
-                const wmaxx = Math.max(lastMove.wx, downPt.wx);
-                const wminy = Math.min(lastMove.wy, downPt.wy);
-                const wmaxy = Math.max(lastMove.wy, downPt.wy);
-                selectInRect(wminx, wmaxx, wminy, wmaxy, additive);
-            } else {
-                // одиночное выделение
-                selectSingle(downPt.wx, downPt.wy, additive);
-            }
-        }
-        //ПКМ
-        if (e.button === 2) {
-            const { ids } = selection.get();
-            const ownedIds = ids.filter(isOwned);
-            if (ownedIds.length && lastMove) {
-                const target = lastMove
-                    ? hitTestPoint(lastMove.wx, lastMove.wy)
-                    : { kind: 'ground' };
-
-                if (mode === 'attackMove') {
-                    if (target.kind === 'ground') {
-                        issue.move(ownedIds, { x: lastMove.wx, y: lastMove.wy }, { attackMove: true });
-                    } else {
-                        if (target.id != null) issue.attack(ownedIds, target.id);
-                    }
-                    mode = 'default';
+        try {
+            //ЛКМ
+            if (e.button === 0 && downPt) {
+                const additive = e.shiftKey || e.ctrlKey;
+                if (dragging && lastMove) {
+                    // рамочка
+                    const wminx = Math.min(lastMove.wx, downPt.wx);
+                    const wmaxx = Math.max(lastMove.wx, downPt.wx);
+                    const wminy = Math.min(lastMove.wy, downPt.wy);
+                    const wmaxy = Math.max(lastMove.wy, downPt.wy);
+                    selectInRect(wminx, wmaxx, wminy, wmaxy, additive);
                 } else {
-                    if (target.kind === 'enemy' && target.id != null) {
-                        issue.attack(ownedIds, target.id);
-                    } else if (target.kind === 'resource' && target.id != null) {
-                        issue.harvest(ownedIds, target.id);
+                    // одиночное выделение
+                    selectSingle(downPt.wx, downPt.wy, additive);
+                }
+            }
+            //ПКМ
+            if (e.button === 2) {
+                const { ids } = selection.get();
+                const ownedIds = ids.filter(isOwned);
+                if (ownedIds.length && lastMove) {
+                    const target = lastMove
+                        ? hitTestPoint(lastMove.wx, lastMove.wy)
+                        : { kind: 'ground' };
+
+                    if (mode === 'attackMove') {
+                        if (target.kind === 'ground') {
+                            issue.move(ownedIds, { x: lastMove.wx, y: lastMove.wy }, { attackMove: true });
+                        } else {
+                            if (target.id != null) issue.attack(ownedIds, target.id);
+                        }
+                        mode = 'default';
                     } else {
-                        issue.moveLine(ownedIds, { x: lastMove.wx, y: lastMove.wy });
+                        if (target.kind === 'enemy' && target.id != null) {
+                            issue.attack(ownedIds, target.id);
+                        } else if (target.kind === 'resource' && target.id != null) {
+                            issue.harvest(ownedIds, target.id);
+                        } else {
+                            issue.moveLine(ownedIds, { x: lastMove.wx, y: lastMove.wy });
+                        }
                     }
                 }
             }
+        } finally {
+            isDown = false;
+            dragging = false;
+            downPt = null; 
         }
-        isDown = false;
-        dragging = false;
-        downPt = null;
     };
 
     const onPointerMove = (e) => {

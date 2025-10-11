@@ -52,14 +52,14 @@ export class UI {
         /**
         * @param {selection} selection
         */
-        const handler = (selection) => {
+        const handler = (snap) => {
             if (!panel) return;
-            const { ids } = selection.get();
+            const { ids } = snap;
             panel.innerHTML = '';
 
             if (!ids.length) return;
             if (ids.length === 1) {
-                const entity = ent()[0];
+                const entity = ent[0];
                 if (!entity) return;
                 panel.appendChild(entity.renderEntityCard());
             } else {
@@ -72,7 +72,7 @@ export class UI {
             }
         }
 
-        handler(selection);
+        handler(selection.get());
         selection.onChange(handler);
     }
 

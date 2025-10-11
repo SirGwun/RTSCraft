@@ -117,7 +117,7 @@ export class Network {
 
     toSend(type, payload) {
         if (this.socket?.readyState === WebSocket.OPEN) {
-            this.socket.send(JSON.stringify({ type type, ...payload }));
+            this.socket.send(JSON.stringify({ type: type, ...payload }));
         }
         else {
             console.log("Connection is not open")
