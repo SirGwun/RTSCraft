@@ -5,17 +5,20 @@ import { issue } from '../client.js';
 
 // === UI (HUD, inspector, join) ===
 export class UI {
-  /** @type {HTMLElement} */ hudConn = document.getElementById('conn');
-  /** @type {HTMLElement} */ hudPing = document.getElementById('ping');
-  /** @type {HTMLElement} */ hudFps = document.getElementById('fps');
-  /** @type {HTMLElement} */ hudPlayers = document.getElementById('players');
-  /** @type {HTMLElement} */ hudGold = document.getElementById('gold');
-  /** @type {HTMLElement} */ hudWood = document.getElementById('wood');
-  /** @type {HTMLElement} */ selectionList = document.getElementById('selectionList');
-  /** @type {HTMLElement} */ actions = document.getElementById('actions');
-  /** @type {HTMLElement} */ log = document.getElementById('log');
-  /** @type {HTMLDivElement} */ joinOverlay = document.getElementById('join');
-  /** @type {HTMLFormElement} */ joinForm = document.getElementById('joinForm');
+    /** @type {HTMLElement} */ root = document.getElementById('root');
+
+      /** @type {HTMLElement} */ playerName = document.getElementById('playerName');
+      /** @type {HTMLElement} */ hudConn = document.getElementById('conn');
+      /** @type {HTMLElement} */ hudPing = document.getElementById('ping');
+      /** @type {HTMLElement} */ hudFps = document.getElementById('fps');
+      /** @type {HTMLElement} */ hudPlayers = document.getElementById('players');
+      /** @type {HTMLElement} */ hudGold = document.getElementById('gold');
+      /** @type {HTMLElement} */ hudWood = document.getElementById('wood');
+      /** @type {HTMLElement} */ selectionList = document.getElementById('selectionList');
+      /** @type {HTMLElement} */ actions = document.getElementById('actions');
+      /** @type {HTMLElement} */ log = document.getElementById('log');
+      /** @type {HTMLDivElement} */ joinOverlay = document.getElementById('join');
+      /** @type {HTMLFormElement} */ joinForm = document.getElementById('joinForm');
 
 
     init(world) {
@@ -76,10 +79,25 @@ export class UI {
         selection.onChange(handler);
     }
 
-    /** @param {(data:{name:string,color:string})=>void} onJoin */
-    bindJoin(onJoin) {
-        const nameInput = document.getElementById('playerName');
-        const colorInput = document.getElementById('playerColor');
+    bindJoin() {
+        const joinForm = document.createElement('div');
+        joinForm.innerHTML = `
+            <form id="joinForm">
+                <label>
+                    Имя игрока
+                    <input id="playerName" maxlength="16" placeholder="Герой" />
+                 </label>
+                <label style="display:block;margin-top:8px;">
+                    Цвет игрока
+                    <input id="playerColor" placeholder="red" />
+                </label>
+                <button type="submit" style="margin-top:10px;">В игру</button>
+            </form>`;
+        joinForm.setId('join');
+        this.root.appendChild(joinForm);
+
+        let name = document.getElementById('playerName').value.trim();
+        let color = document.getElementById('playerColor').value.trim();
 
         const savedName = localStorage.getItem('playerName') || '';
         const savedColor = localStorage.getItem('playerColor') || 'red';
@@ -90,33 +108,17 @@ export class UI {
         this.joinForm.addEventListener('submit', (e) => {
             e.preventDefault();
 
-            // берём свежие значения
-            let name = nameInput.value.trim();
-            let color = colorInput.value.trim();
-
-            // нормализуем имя
-            name = name.slice(0, 16).replace(/[^\w\u0400-\u04FF -]/g, '');
+            name = name.slice(0, 26).replace(/[^\w\u0400-\u04FF -]/g, '');
             if (!name) name = 'Player';
-
-            // проверяем цвет
             if (!isValidCssColor(color)) color = 'red';
 
-            // сохраняем в localStorage
             localStorage.setItem('playerName', name);
             localStorage.setItem('playerColor', color);
 
-            // скрываем окно
             this.joinOverlay.classList.add('hidden');
-
-            // вызываем колбэк
+            this.playerName.textContent = nameInput.value.trim();
             onJoin({ name, color });
         });
-
-        // автологин, если имя сохранено
-        if (savedName) {
-            this.joinOverlay.classList.add('hidden');
-            onJoin({ name: savedName, color: savedColor });
-        }
 
         function isValidCssColor(value) {
             const s = new Option().style;

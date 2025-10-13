@@ -8,25 +8,21 @@ using GameServer.Server.Protocol;
 
 public sealed class SystemTextJsonSerializer
 {
-    public object Deserialize(string json)
+    public MsgBase? Deserialize(string json)
     {
-        var env = JsonSerializer.Deserialize<MsgBase>(json, Json.Options);
-        return env?.Type switch
-        {
-            "ping" => JsonSerializer.Deserialize<PingMsg>(json, Json.Options)!,
-            "join" => JsonSerializer.Deserialize<JoinMsg>(json, Json.Options)!,
-            "snapshot" => JsonSerializer.Deserialize<SnapshotMsg>(json, Json.Options)!,
-            _ => env ?? new MsgBase()
-        };
+        //Console.WriteLine("[JSON]" + json);
+        var msg = JsonSerializer.Deserialize<MsgBase>(json, Json.Options);
+        //Console.WriteLine("[MSG]" + msg);
+        return msg;
     }
 
-    public async Task<object?> ReceiveAsync(WebSocket socket, byte[] buffer, CancellationToken ct)
+    public async Task<MsgBase?> ReceiveAsync(WebSocket socket, byte[] buffer, CancellationToken ct)
     {
         using var ms = new MemoryStream();
 
         while (!ct.IsCancellationRequested && socket.State == WebSocketState.Open)
         {
-            var result = await socket.ReceiveAsync(buffer, ct);
+            WebSocketReceiveResult result = await socket.ReceiveAsync(buffer, ct);
 
             if (result.MessageType == WebSocketMessageType.Close)
                 return null;
@@ -38,14 +34,14 @@ public sealed class SystemTextJsonSerializer
                     do { result = await socket.ReceiveAsync(buffer, ct); }
                     while (!result.EndOfMessage && socket.State == WebSocketState.Open);
                 }
-                return new MsgBase(); // без type → сессия пропустит
+                return null;
             }
 
             ms.Write(buffer, 0, result.Count);
 
             if (result.EndOfMessage)
             {
-                var json = Encoding.UTF8.GetString(ms.GetBuffer(), 0, (int)ms.Length);
+                string json = Encoding.UTF8.GetString(ms.GetBuffer(), 0, (int)ms.Length);
                 return Deserialize(json);
             }
         }
@@ -53,9 +49,10 @@ public sealed class SystemTextJsonSerializer
         return null;
     }
 
-    public Task SendAsync(WebSocket socket, object payload, CancellationToken ct)
+    public Task SendAsync(WebSocket socket, MsgBase payload, CancellationToken ct)
     {
-        var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(payload, Json.Options));
+        var json = JsonSerializer.Serialize<MsgBase>(payload, Json.Options);
+        var bytes = Encoding.UTF8.GetBytes(json);
         return socket.SendAsync(bytes, WebSocketMessageType.Text, true, ct);
     }
 }

@@ -1,16 +1,19 @@
 ﻿// === Networking ===
 import { onSnapshot } from './synchronizer.js';
-import { world } from '../client.js';
+import { world, Me } from '../client.js';
 import { Player } from '../data/player.js';
 export class Network {
-  /** @type {WebSocket|null} */         socket = null;
-                                        pingPeriodMs = 2500;
-                                        _pingTimer = 0;
-  /** @type {(snap:Snapshot)=>void} */  onSnapshot = () => { };
-  /** @type {(evt:any)=>void} */        onEvent = () => { };
-  /** @type {(ms:number)=>void} */      onPing = () => { };
+    /** @type {(state:'connecting'|'open'|'closed'|'error')=>void} */
+    onState = () => { };
 
-  /** @type {(state:'connecting'|'open'|'closed'|'error')=>void} */ onState = () => { };
+    /** @type {WebSocket|null} */
+    socket = null;
+
+    pingPeriodMs = 2500;
+    _pingTimer = 0;
+    onEvent = () => { };
+    onPing = () => { };
+    pendingOut = [];
 
     connect() {
         this.url = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
@@ -22,9 +25,19 @@ export class Network {
         const ws = new WebSocket(this.url);
         this.socket = ws;
 
-        this.socket.onopen = () => { this.onState("open"); this._startPing(); };
+        this.socket.onopen = () => {
+            this.onState("open");
+
+            for (const out of this.pendingOut) ws.send(out);
+            this.pendingOut = [];
+
+            this._startPing();
+        };
         this.socket.onclose = () => this.onState('closed');
-        this.socket.onerror = () => this.onState('error');
+        this.socket.onerror = () => {
+            this.onState('error');
+            console.log('ws error');
+        }
         this.socket.onmessage = (ev) => this._routeMessage(ev.data);
     }
 
@@ -75,22 +88,6 @@ export class Network {
         } catch { }
     }
 
-    _handleUnknown(msg) {
-        console.log('Uncnown server message: ', msg);
-    }
-
-    _startPing() {
-        this._stopPing();
-        this._pingTimer = setInterval(() => this.sendPing(), this.pingPeriodMs);
-        this.sendPing();
-    }
-
-    _stopPing() {
-        if (this._pingTimer) {
-            clearInterval(this._pingTimer);
-            this._pingTimer = 0;
-        }
-    }
 
     close() {
         if (this._pingTimer != 0) {
@@ -116,37 +113,46 @@ export class Network {
     }
 
     toSend(type, payload) {
-        if (this.socket?.readyState === WebSocket.OPEN) {
-            this.socket.send(JSON.stringify({ type: type, ...payload }));
-        }
-        else {
-            console.log("Connection is not open")
-        }
+        this._send(JSON.stringify({ type: type, ...payload }));
     }
 
     /** @param {{name:string,color:string}} payload */
     sendJoin(payload) {
-        if (this.socket?.readyState === WebSocket.OPEN) {
-            this.socket.send(JSON.stringify({ type: "join", ...payload }));
-        } else {
-            console.log("Connection is not open")
-        }
+        console.log('Send join');
+        this._send(JSON.stringify({ type: "join", ...payload }));
     }
-    /** @param {any} cmd */
+
     sendCommand(cmd) {
-        if (this.socket?.readyState === WebSocket.OPEN) {
-            this.socket.send(JSON.stringify({ type: "command", ...cmd }));
-        } else {
-            console.log("Connection is not open")
-        }
+        console.log("Sending cmd,", cmd);
+        this._send(JSON.stringify({ type: "cmd", clientId: Me.id, ...cmd }));
     }
 
     sendPing() {
+        this._send(JSON.stringify({ type: "ping", clientTime: Date.now() }));
+    }
+
+    _send(json) {
         if (this.socket?.readyState === WebSocket.OPEN) {
-            const clientTime = Date.now();
-            this.socket.send(JSON.stringify({ type: "ping", clientTime }));
+            this.socket.send(json);
         } else {
-            console.log("Connection is not open")
+            this.pendingOut.push(json);
+        }
+    }
+
+    _handleUnknown(msg) {
+        console.log('Uncnown server message: ', msg);
+    }
+
+    _startPing() {
+        this._stopPing();
+        this._pingTimer = setInterval(() => this.sendPing(), this.pingPeriodMs);
+        this.sendPing();
+    }
+
+    _stopPing() {
+        if (this._pingTimer) {
+            clearInterval(this._pingTimer);
+            this._pingTimer = 0;
         }
     }
 

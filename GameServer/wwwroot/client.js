@@ -62,11 +62,13 @@ export const commandBuf = new CommandBuf();
 export const net = new Network();
 export const issue = model.issue;
 export let Players = {};
-export let Player = { id: '', name: '', color: '', gold: 0, wood: 0 };
+export let Me = { id: '', name: '', color: '', gold: 0, wood: 0 };
 
 
 // === Bootstrap ===
 (function bootstrap() {
+    console.log("__build__", "__" + new Date().toISOString());
+
     net.onSnapshot = snap => {
         world.applySnapshot(snap);
         ui.setPlayers(world.players.size);
@@ -81,14 +83,17 @@ export let Player = { id: '', name: '', color: '', gold: 0, wood: 0 };
 
     ui.init(world);
 
-    model.onEvent(ev => console.log('[MODEL EVT]', ev));
-    initInput(map, model, () => Array.from(world.entities.values()), ui, Player);
+    ui.requestJoin();
 
     ui.bindJoin(({ name, color }) => {
-        Player = { id: '', name, color, gold: 0, wood: 0 };
+        Me = { id: '', name, color, gold: 0, wood: 0 };
         net.connect();
         net.sendJoin({ name, color });
     });
+
+   
+    model.onEvent(ev => console.log('[MODEL EVT]', ev));
+    initInput(map, model, () => Array.from(world.entities.values()), ui, Me);
 
     makeTestUnits();
     model.start();
@@ -103,7 +108,7 @@ function makeTestUnits() {
         x: 50, y: 50,
         w: 24, h: 24,
         hp: 50,
-        owner: Player.id,
+        owner: Me.id,
         speed: 90,
         color: 'yellow'
     }));
@@ -113,7 +118,7 @@ function makeTestUnits() {
         x: 60, y: 60,
         w: 32, h: 32,
         hp: 100,
-        owner: Player.id,
+        owner: Me.id,
         speed: 90,
         color: 'green'
     }));
@@ -123,7 +128,7 @@ function makeTestUnits() {
         x: 200, y: 160,
         w: 32, h: 32,
         hp: 80,
-        owner: Player.id,
+        owner: Me.id,
         speed: 90,
         color: 'red'
     }));
@@ -133,10 +138,10 @@ function makeTestUnits() {
         x: 104, y: 64,
         w: 12, h: 24,
         hp: 50,
-        owner: Player.id,
+        owner: Me.id,
         speed: 90,
         color: 'blue'
     }));
 
-    model.issue.spawnUnit({ id: 'u2', type: 'unit_peasant', x: 94, y: 94, w: 24, h: 24, color: 'orange', speed: 80, owner: Player.id });
+    model.issue.spawnUnit({ id: 'u2', type: 'unit_peasant', x: 94, y: 94, w: 24, h: 24, color: 'orange', speed: 80, owner: Me.id });
 }

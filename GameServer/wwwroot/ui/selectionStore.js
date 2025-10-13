@@ -6,7 +6,12 @@
 
     const subs = new Set();
 
-    const notify = () => { subs.forEach(fn => fn(get())); };
+    //queueMicrotask в теории может замдлеять рендер, попробовать что-то другое, если будет так 
+    const notify = () => {
+        queueMicrotask(() => {
+            for (const fn of subs) fn(get());
+        });
+    };
 
     const get = () => { return { ids: Array.from(ids), hovel }; };
     const set = (newSelect) => { ids = new Set(newSelect), notify(); };

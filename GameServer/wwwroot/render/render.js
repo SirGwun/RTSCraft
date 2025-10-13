@@ -212,8 +212,6 @@ export function panBy(dx, dy) {
     let nx = cam.x + dx / z;
     let ny = cam.y + dy / z;
 
-    console.log("pan", nx, ny)
-
     if (nx >= b.l && nx <= b.r) cam.x = nx;
     if (ny >= b.b && ny <= b.t) cam.y = ny;
 }

@@ -14,13 +14,36 @@ builder.Services.AddSingleton<WebSocketAcceptor>();
 
 var app = builder.Build();
 
+Console.WriteLine($"Environment: {app.Environment.EnvironmentName}");
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        OnPrepareResponse = ctx =>
+        {
+            var h = ctx.Context.Response.GetTypedHeaders();
+            h.CacheControl = new Microsoft.Net.Http.Headers.CacheControlHeaderValue
+            {
+                NoStore = true,       
+                NoCache = true,       
+                MustRevalidate = true
+            };
+            h.Expires = DateTimeOffset.UtcNow;
+        }
+    });
+}
+else
+{
+    app.UseStaticFiles();
+}
+
 app.Lifetime.ApplicationStarted.Register(() =>
     Console.WriteLine("GameServer started: " + app.Urls.FirstOrDefault())
 );
 
 app.UseWebSockets();       
-app.UseDefaultFiles();     
-app.UseStaticFiles();      
+app.UseDefaultFiles();        
 
 
 app.Map("/ws", (HttpContext ctx, WebSocketAcceptor acceptor) => acceptor.AcceptAsync(ctx));

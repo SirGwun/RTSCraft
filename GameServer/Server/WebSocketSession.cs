@@ -37,9 +37,20 @@ public sealed class WebSocketSession
             while (!ct.IsCancellationRequested && _socket.State == WebSocketState.Open)
             {
                 var msg = await _serializer.ReceiveAsync(_socket, buffer, ct);
-                if (msg is null) break;                               
-                if (msg is MsgBase { Type: null }) continue;              
 
+                if (msg is null) continue;
+
+                if (msg is CommandBase cmd)
+                {
+                    Console.WriteLine("[CMD] " + cmd);
+                    continue;
+                }
+
+                if (msg is JoinMsg)
+                {
+                    Console.WriteLine("[JOIN] " + msg);
+                }
+                
                 switch (msg)
                 {
                     case PingMsg ping:
@@ -49,7 +60,6 @@ public sealed class WebSocketSession
                             ClientTime = ping.ClientTime
                         }, ct);
                         break;
-
                     case JoinMsg join:
                         var id = _ids.Next();
 
@@ -61,8 +71,8 @@ public sealed class WebSocketSession
 
                         await _snapshots.SendInitialAsync(this, id, ct);
                         break;
-
                     default:
+                        Console.WriteLine($"[WARN] Unknown message: {msg}");
                         break;
                 }
             }
@@ -74,7 +84,7 @@ public sealed class WebSocketSession
         }
     }
 
-    public Task SendAsync(object payload, CancellationToken ct)
+    public Task SendAsync(MsgBase payload, CancellationToken ct)
         => _serializer.SendAsync(_socket, payload, ct);
 
     private async Task SafeCloseAsync(CancellationToken ct)
