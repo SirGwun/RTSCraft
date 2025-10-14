@@ -1,6 +1,6 @@
 ﻿// === Networking ===
 import { onSnapshot } from './synchronizer.js';
-import { world, Me } from '../client.js';
+import { init, world, me } from '../client.js';
 import { Player } from '../data/player.js';
 export class Network {
     /** @type {(state:'connecting'|'open'|'closed'|'error')=>void} */
@@ -45,7 +45,7 @@ export class Network {
         let msg;
         try { msg = JSON.parse(raw); }
         catch {
-            console.log('Не удалось распарсить сообщение', raw);
+            console.log('Failed to parse message', raw);
             return;
         }
         const type = msg?.type;
@@ -73,11 +73,9 @@ export class Network {
     } 
 
     _applyInit(msg) {
-        const myid = msg.myId;
-        const serverTime = msg.serverTime;
-        const players = msg.players;
-
-        world.setPlayers(players.map(p => new Player(p.id, p.name, p.color, p.gold, p.wood)));
+        //validation later
+        console.log('Server joining success');
+        init(msg);
     }
 
     _handlePong(msg) {
@@ -118,13 +116,13 @@ export class Network {
 
     /** @param {{name:string,color:string}} payload */
     sendJoin(payload) {
-        console.log('Send join');
+        console.log('Waiting to join server');
         this._send(JSON.stringify({ type: "join", ...payload }));
     }
 
     sendCommand(cmd) {
         console.log("Sending cmd,", cmd);
-        this._send(JSON.stringify({ type: "cmd", clientId: Me.id, ...cmd }));
+        this._send(JSON.stringify({ type: "cmd", clientId: me.id, ...cmd }));
     }
 
     sendPing() {

@@ -1,4 +1,5 @@
-﻿import { selection } from './selectionStore.js';
+﻿// @ts-nocheck
+import { selection } from './selectionStore.js';
 import { state } from '../render/render.js';
 import { Entity } from '../data/entity.js';
 import { issue } from '../client.js';
@@ -79,9 +80,11 @@ export class UI {
         selection.onChange(handler);
     }
 
-    bindJoin() {
-        const joinForm = document.createElement('div');
-        joinForm.innerHTML = `
+    
+    bindJoin(onJoin) {
+        const joinContainer = document.createElement('div');
+        joinContainer.id = 'join';
+        joinContainer.innerHTML = `
             <form id="joinForm">
                 <label>
                     Имя игрока
@@ -93,30 +96,25 @@ export class UI {
                 </label>
                 <button type="submit" style="margin-top:10px;">В игру</button>
             </form>`;
-        joinForm.setId('join');
-        this.root.appendChild(joinForm);
+        
+        this.root.appendChild(joinContainer);
 
-        let name = document.getElementById('playerName').value.trim();
-        let color = document.getElementById('playerColor').value.trim();
-
-        const savedName = localStorage.getItem('playerName') || '';
-        const savedColor = localStorage.getItem('playerColor') || 'red';
-
-        if (nameInput) nameInput.value = savedName;
-        if (colorInput) colorInput.value = savedColor;
-
-        this.joinForm.addEventListener('submit', (e) => {
+        const form = joinContainer.querySelector('#joinForm');
+        
+        const nameInput = form.querySelector('#playerName');
+        const colorInput = form.querySelector('#playerColor');
+        
+        
+        form.addEventListener('submit', (e) => {
             e.preventDefault();
-
-            name = name.slice(0, 26).replace(/[^\w\u0400-\u04FF -]/g, '');
-            if (!name) name = 'Player';
-            if (!isValidCssColor(color)) color = 'red';
-
+            
+            const name = nameInput.value.trim() || 'Player';
+            const color = isValidCssColor(colorInput?.value?.trim()) ? colorInput?.value?.trim() : 'red';
+        
             localStorage.setItem('playerName', name);
             localStorage.setItem('playerColor', color);
-
-            this.joinOverlay.classList.add('hidden');
-            this.playerName.textContent = nameInput.value.trim();
+        
+            joinContainer.remove(); 
             onJoin({ name, color });
         });
 

@@ -1,4 +1,4 @@
-﻿import { Me, Players, model as mainModel, world as mainWorld} from '../client.js';
+﻿import { me, players, model as mainModel, world as mainWorld} from '../client.js';
 import { World } from '../data/world.js';
 import { createModel } from './model.js'; 
 
@@ -6,8 +6,8 @@ let tempModel;
 
 export function onSnapshot(snap) {
     if (!snap.lastAckSeq) return;
-    if (snap.myId && Me.id !== snap.myId) {
-        Me.id = snap.myId;
+    if (snap.myId && me.id !== snap.myId) {
+        me.id = snap.myId;
         mainWorld.myId = String(snap.myId);
         mainWorld.setPlayers(snap.players);
     }

@@ -6,142 +6,60 @@ import { World } from './data/world.js';
 import { Entity } from './data/entity.js';
 import { createModel } from './core/model.js';
 import { selection } from './ui/selectionStore.js';
+import { CommandBuf } from './core/commandBuf.js';
+import { makeTestUnits1 } from './test/props.js';
 
-// === Config / Types ===
-const WS_PATH = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
-const SNAPSHOT_HZ = 20;
-
-/** @typedef {{ id:string, name:string, color:string, gold:number, wood:number }} Palyer */
-/** @typedef {{ id:string, type:string, x:number, y:number, w:number, h:number, hp:number, owner:string }} Entity */
-/** @typedef {{ time:number, palyers: Palyer[], entities: Entity[], me?: string }} Snapshot */
-
-
-// === Core Singletons (wiring) ===
-class GameClient {
-  /** @type {Network} */ net;
-  /** @type {World} */ world;
-  /** @type {Input} */ input;
-  /** @type {UI} */ ui;
-  /** @type {Selection} */ selection;
-  /** @type {CommandBus} */ commands;
-
-    constructor() { }
-
-    init() { }
-    start() { }
-    stop() { }
-
-    onSnapshot /** @param {Snapshot} snap */(snap) { }
-    onEvent /** @param {{type:string, [k:string]:any}} evt */(evt) { }
-}
-
-class CommandBuf {
-    hi = []; // SYNC, системные
-    lo = []; // пользовательские, предикт
-
-    enqueue(cmd, prio = 'lo') {
-        (prio === 'hi' ? this.hi : this.lo).push(cmd);
-    }
-    drain() {
-        const a = this.hi; this.hi = [];
-        const b = this.lo; this.lo = [];
-        return a.concat(b);
-    }
-}
+/** Core */
+export const ui = new UI();
+export const net = new Network();
+export let world;
+export let model; 
+export let issue;
+export const commandBuf = new CommandBuf();
+export let players;
+export let me = { id: '', name: '', color: '', gold: 0, wood: 0 };
 
 /** DOM */
 const map = /** @type {HTMLCanvasElement} */ (document.getElementById('map'));
 const overlay = /** @type {HTMLCanvasElement} */ (document.getElementById('overlay'));
 
-/** Core */
-export const world = new World();
-export const model = createModel({ world });
+(function joinServer() {
+    const name = localStorage.getItem('playerName');
+    const color = localStorage.getItem('playerColor');
 
-export const ui = new UI();
-export const commandBuf = new CommandBuf();
-export const net = new Network();
-export const issue = model.issue;
-export let Players = {};
-export let Me = { id: '', name: '', color: '', gold: 0, wood: 0 };
+    if (name != null && color != null) {
+        net.sendJoin({ name, color });
+    } else {
+        ui.bindJoin(({ name, color }) => net.sendJoin({ name, color }));
+    }
+});
 
+export function init(data) {
+    world = new World(data);
+    ui.init(world);
+    model = createModel({ world });
+    issue = model.issue;
+    players = world.getPlayers();
+    me = world.getMyPlayer();
+
+    initRender(document.getElementById('overlay'), document.getElementById('overlay'), world, selection);
+    initInput(map, model, () => Array.from(world.entities.values()), ui, me);
+
+    bootstrap();
+}
 
 // === Bootstrap ===
-(function bootstrap() {
+function bootstrap() {
     console.log("__build__", "__" + new Date().toISOString());
-
-    net.onSnapshot = snap => {
-        world.applySnapshot(snap);
-        ui.setPlayers(world.players.size);
-    };
 
     net.onEvent = evt => ui.pushLog(JSON.stringify(evt));
     net.onPing = ms => ui.setPing(ms + "ms");
     net.onState = st => ui.setConnState(st);
-
-    initRender(document.getElementById('overlay'), document.getElementById('overlay'), world, selection);
     renderState.onFps = fps => ui.setFps(fps);
-
-    ui.init(world);
-
-    ui.requestJoin();
-
-    ui.bindJoin(({ name, color }) => {
-        Me = { id: '', name, color, gold: 0, wood: 0 };
-        net.connect();
-        net.sendJoin({ name, color });
-    });
-
-   
     model.onEvent(ev => console.log('[MODEL EVT]', ev));
-    initInput(map, model, () => Array.from(world.entities.values()), ui, Me);
+    
+    makeTestUnits1();
 
-    makeTestUnits();
     model.start();
-
     startRender();
-})();
-
-function makeTestUnits() {
-    world.upsertEntity(new Entity({
-        id: 'unit1',
-        type: 'unit_peasant',
-        x: 50, y: 50,
-        w: 24, h: 24,
-        hp: 50,
-        owner: Me.id,
-        speed: 90,
-        color: 'yellow'
-    }));
-    world.upsertEntity(new Entity({
-        id: 'unit2',
-        type: 'unit_soldier',
-        x: 60, y: 60,
-        w: 32, h: 32,
-        hp: 100,
-        owner: Me.id,
-        speed: 90,
-        color: 'green'
-    }));
-    world.upsertEntity(new Entity({
-        id: 'unit3',
-        type: 'unit_soldier',
-        x: 200, y: 160,
-        w: 32, h: 32,
-        hp: 80,
-        owner: Me.id,
-        speed: 90,
-        color: 'red'
-    }));
-    world.upsertEntity(new Entity({
-        id: 'unit4',
-        type: 'unit_peasant',
-        x: 104, y: 64,
-        w: 12, h: 24,
-        hp: 50,
-        owner: Me.id,
-        speed: 90,
-        color: 'blue'
-    }));
-
-    model.issue.spawnUnit({ id: 'u2', type: 'unit_peasant', x: 94, y: 94, w: 24, h: 24, color: 'orange', speed: 80, owner: Me.id });
 }

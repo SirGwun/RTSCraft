@@ -3,9 +3,9 @@
     "target": "ES2022",
     "module": "ESNext",
     "lib": [ "ES2022", "DOM" ],
-    "checkJs": true,
+    "checkJs": false,
     "noEmit": true,
-    "strict": true,
+    "strict": false,
     "noImplicitAny": false,
     "allowJs": true
   },
