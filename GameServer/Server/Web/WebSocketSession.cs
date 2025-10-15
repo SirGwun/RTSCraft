@@ -1,8 +1,9 @@
 ﻿using System.Net.WebSockets;
-using GameServer.Server.Protocol;
-using GameServer.Server.Domain;
+using GameServer.Server.Core.Domain;
+using GameServer.Server.Web.Protocol;
+using GameServer.Server.Game;
 
-namespace GameServer.Server;
+namespace GameServer.Server.Web;
 
 public sealed class WebSocketSession
 {
@@ -45,29 +46,21 @@ public sealed class WebSocketSession
                     Console.WriteLine("[CMD] " + cmd);
                     continue;
                 }
-
-                if (msg is JoinMsg)
-                {
-                    Console.WriteLine("[JOIN] " + msg);
-                }
+                
                 
                 switch (msg)
                 {
                     case PingMsg ping:
-                        await _serializer.SendAsync(_socket, new PongMsg
-                        {
-                            ServerTime = UnixMs.Now(),
-                            ClientTime = ping.ClientTime
-                        }, ct);
+                        await _serializer.SendAsync(_socket, new PongMsg(UnixMs.Now(), ping.ClientTime), ct);
                         break;
                     case JoinMsg join:
-                        var id = _ids.Next();
+                        var id = _ids.NextPlayer();
 
-                        _players.Add(new Player { Id = id, Name = join.Name, Color = join.Color });
+                        _players.Add(new Player { Id = id, Name = join.Name, Color = join.Collor });
 
                         PlayerId = id;
 
-                        Console.WriteLine($"[JOIN] #{id} name='{join.Name}' color='{join.Color}'");
+                        Console.WriteLine("[JOIN] " + msg);
 
                         await _snapshots.SendInitialAsync(this, id, ct);
                         break;

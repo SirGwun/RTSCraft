@@ -1,10 +1,10 @@
 ﻿// === Networking ===
 import { onSnapshot } from './synchronizer.js';
-import { init, world, me } from '../client.js';
+import { init, world, me, ui } from '../client.js';
 import { Player } from '../data/player.js';
 export class Network {
     /** @type {(state:'connecting'|'open'|'closed'|'error')=>void} */
-    onState = () => { };
+    onState = (st) => ui.setConnState(st);
 
     /** @type {WebSocket|null} */
     socket = null;
@@ -74,7 +74,7 @@ export class Network {
 
     _applyInit(msg) {
         //validation later
-        console.log('Server joining success');
+        console.log('Server joining success', msg);
         init(msg);
     }
 
@@ -130,10 +130,12 @@ export class Network {
     }
 
     _send(json) {
+        console.log('[Sending] ', json);
         if (this.socket?.readyState === WebSocket.OPEN) {
             this.socket.send(json);
         } else {
             this.pendingOut.push(json);
+            this.connect();
         }
     }
 

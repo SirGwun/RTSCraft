@@ -1,3 +1,6 @@
+﻿import { world, me, model } from "../client.js";
+import { Entity } from "../data/entity.js";
+
 export function makeTestUnits1() {
     world.upsertEntity(new Entity({
         id: 'unit1',

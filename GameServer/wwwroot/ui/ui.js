@@ -2,13 +2,13 @@
 import { selection } from './selectionStore.js';
 import { state } from '../render/render.js';
 import { Entity } from '../data/entity.js';
-import { issue } from '../client.js';
+import { issue, me } from '../client.js';
 
 // === UI (HUD, inspector, join) ===
 export class UI {
     /** @type {HTMLElement} */ root = document.getElementById('root');
 
-      /** @type {HTMLElement} */ playerName = document.getElementById('playerName');
+      /** @type {HTMLElement} */ playerName = document.getElementById('playersName');
       /** @type {HTMLElement} */ hudConn = document.getElementById('conn');
       /** @type {HTMLElement} */ hudPing = document.getElementById('ping');
       /** @type {HTMLElement} */ hudFps = document.getElementById('fps');
@@ -25,6 +25,8 @@ export class UI {
     init(world) {
         this.showMouseCoord();
         this.initSelectionPanel(world.entities);
+
+        this.setPlayersName(me.name);
     }
 
     showMouseCoord() {
@@ -135,9 +137,11 @@ export class UI {
     setFps /** @param {number} fps */(fps) {
         this.hudFps.textContent = fps;
     }
-    setPlayers /** @param {number} n */(n) {
-        this.hudPlayers.textContent = n;
+
+    setPlayersName /** @param {string} name */(name) {
+        this.playerName.textContent = name;
     }
+
     setResources /** @param {{gold:number, wood:number}} r */(r) {
         this.hudGold.textContent = r.gold;
         this.hudWood.textContent = r.wood;

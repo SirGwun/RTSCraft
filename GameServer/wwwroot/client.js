@@ -26,21 +26,25 @@ const overlay = /** @type {HTMLCanvasElement} */ (document.getElementById('overl
 (function joinServer() {
     const name = localStorage.getItem('playerName');
     const color = localStorage.getItem('playerColor');
-
+    console.log('at start');
     if (name != null && color != null) {
         net.sendJoin({ name, color });
     } else {
         ui.bindJoin(({ name, color }) => net.sendJoin({ name, color }));
     }
-});
+})();
 
 export function init(data) {
     world = new World(data);
+
+    players = world.getPlayers();
+    me = world.getMyPlayer();
+
+    console.log("me - ", me.name);
+
     ui.init(world);
     model = createModel({ world });
     issue = model.issue;
-    players = world.getPlayers();
-    me = world.getMyPlayer();
 
     initRender(document.getElementById('overlay'), document.getElementById('overlay'), world, selection);
     initInput(map, model, () => Array.from(world.entities.values()), ui, me);
@@ -54,7 +58,6 @@ function bootstrap() {
 
     net.onEvent = evt => ui.pushLog(JSON.stringify(evt));
     net.onPing = ms => ui.setPing(ms + "ms");
-    net.onState = st => ui.setConnState(st);
     renderState.onFps = fps => ui.setFps(fps);
     model.onEvent(ev => console.log('[MODEL EVT]', ev));
     

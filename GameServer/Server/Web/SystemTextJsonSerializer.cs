@@ -1,19 +1,25 @@
 ﻿using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
-using GameServer.Server.Protocol;
 
-namespace GameServer.Server;
-using GameServer.Server.Protocol;
+namespace GameServer.Server.Web;
+using GameServer.Server.Web.Protocol;
 
 public sealed class SystemTextJsonSerializer
 {
     public MsgBase? Deserialize(string json)
-    {
-        //Console.WriteLine("[JSON]" + json);
-        var msg = JsonSerializer.Deserialize<MsgBase>(json, Json.Options);
-        //Console.WriteLine("[MSG]" + msg);
-        return msg;
+    {   
+        try
+        {
+            var msg = JsonSerializer.Deserialize<MsgBase>(json, Json.Options);
+            return msg;
+        }
+        catch (JsonException e)
+        {
+            Console.WriteLine("[Exception!!!] " + "Can't handle input! " + json);
+            Console.WriteLine("[Exception!!!] " + e);
+            return new MsgBase();
+        }
     }
 
     public async Task<MsgBase?> ReceiveAsync(WebSocket socket, byte[] buffer, CancellationToken ct)
@@ -51,7 +57,7 @@ public sealed class SystemTextJsonSerializer
 
     public Task SendAsync(WebSocket socket, MsgBase payload, CancellationToken ct)
     {
-        var json = JsonSerializer.Serialize<MsgBase>(payload, Json.Options);
+        var json = JsonSerializer.Serialize(payload, Json.Options);
         var bytes = Encoding.UTF8.GetBytes(json);
         return socket.SendAsync(bytes, WebSocketMessageType.Text, true, ct);
     }

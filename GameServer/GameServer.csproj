@@ -12,8 +12,26 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Game\Units\" />
-    <Folder Include="Server\Domain\" />
+    <Folder Include="Server\Core\Domain\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="wwwroot\client.js" />
+    <None Include="wwwroot\core\commandBuf.js" />
+    <None Include="wwwroot\core\model.js" />
+    <None Include="wwwroot\core\network.js" />
+    <None Include="wwwroot\core\synchronizer.js" />
+    <None Include="wwwroot\data\entity.js" />
+    <None Include="wwwroot\data\player.js" />
+    <None Include="wwwroot\data\world.js" />
+    <None Include="wwwroot\eslint.config.js" />
+    <None Include="wwwroot\index.html" />
+    <None Include="wwwroot\newFile.js" />
+    <None Include="wwwroot\render\render.js" />
+    <None Include="wwwroot\test\props.js" />
+    <None Include="wwwroot\ui\input.js" />
+    <None Include="wwwroot\ui\selectionStore.js" />
+    <None Include="wwwroot\ui\ui.js" />
   </ItemGroup>
 
 </Project>

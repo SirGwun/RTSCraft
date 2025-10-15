@@ -9,7 +9,7 @@ export class World {
     players = new Map();
     /** @type {Map<string, Entity>} */
     entities = new Map();
-    myId = '';
+    myId = -1;
 
     /** @returns {Map<string, Player>} */
     getPlayers() { return this.players; }
@@ -30,10 +30,14 @@ export class World {
         if (snap.entities) {
             this.setEntities(snap.entities);
         }
+
+        if (snap.players) {
+            this.setPlayers(snap.players);
+        }
     }
 
     setPlayers(players) {
-        const list = Array.isArray(snap.players) ? snap.players : Object.values(snap.players);
+        const list = Array.isArray(players) ? players : Object.values(players);
         for (const p of list) {
             if (!p) continue;
             const pid = p.id != null ? String(p.id) : undefined;

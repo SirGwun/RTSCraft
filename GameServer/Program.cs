@@ -1,7 +1,6 @@
-﻿using GameServer.Server.Protocol;
-using GameServer.Server.Domain;
-using Microsoft.AspNetCore.Http;
-using GameServer.Server;
+﻿using Microsoft.AspNetCore.Http;
+using GameServer.Server.Web;
+using GameServer.Server.Core.Domain;
 
 var builder = WebApplication.CreateBuilder(args);
 

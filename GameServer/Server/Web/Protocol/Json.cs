@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace GameServer.Server.Protocol;
+namespace GameServer.Server.Web.Protocol;
 
 public static class Json
 {

@@ -118,11 +118,10 @@
 <body>
     <div id="root">
         <div id="hud">
-            <span class="pill"> <b id="playerName">—</b></span>
+            <span class="pill"> <b id="playersName">—</b></span>
             <span class="pill">Conn: <b id="conn">—</b></span>
             <span class="pill">Ping: <b id="ping">—</b></span>
             <span class="pill">FPS: <b id="fps">—</b></span>
-            <span class="pill">Players: <b id="players">0</b></span>
             <span class="pill">Gold: <b id="gold">0</b></span>
             <span class="pill">Wood: <b id="wood">0</b></span>
         </div>
@@ -145,21 +144,6 @@
             </div>
         </div>
     </div>
-
-    <div id="join">
-        <form id="joinForm">
-            <label>
-                Имя игрока
-                <input id="playerName" maxlength="16" placeholder="Герой" />
-            </label>
-            <label style="display:block;margin-top:8px;">
-                Цвет игрока
-                <input id="playerColor" placeholder="red" />
-            </label>
-            <button type="submit" style="margin-top:10px;">В игру</button>
-        </form>
-    </div>
-
     <script type="module" src="/client.js"></script>
 </body>
 </html>

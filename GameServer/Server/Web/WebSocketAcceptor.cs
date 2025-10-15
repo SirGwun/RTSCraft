@@ -1,9 +1,8 @@
 ﻿using System.Net.WebSockets;
 using Microsoft.AspNetCore.Http;
-using GameServer.Server.Protocol;
-using GameServer.Server.Domain;
+using GameServer.Server.Core.Domain;
 
-namespace GameServer.Server;
+namespace GameServer.Server.Web;
 
 public sealed class WebSocketAcceptor
 {
